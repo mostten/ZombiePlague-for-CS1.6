@@ -18,8 +18,10 @@
 #include <cs_ham_bots_api>
 #include <zp50_class_ghost>
 #include <zp50_colorchat>
+#include <zp50_zombie_sounds>
 
 #define MAXPLAYERS 32
+#define SOUND_MAX_LENGTH 64
 
 // Classic Ghost Attributes
 new const ghostclass1_name[] = "Classic Ghost"
@@ -41,6 +43,17 @@ new g_Visible[MAXPLAYERS+1]
 new Float:g_VisibleNextDownTime[MAXPLAYERS+1]
 new bool:g_FlashlightTurrnon[MAXPLAYERS+1]
 new g_Stuck[MAXPLAYERS+1]
+
+// Ghost sounds
+new const sound_ghost_pain[][] = { "zombie_plague/nemesis_pain1.wav" , "zombie_plague/nemesis_pain2.wav" , "zombie_plague/nemesis_pain3.wav" }
+new const sound_ghost_die[][] = { "zombie_plague/ghost/zbs_death_female_1.wav" }
+new const sound_ghost_fall[][] = { "zombie_plague/zombie_fall1.wav" }
+new const sound_ghost_miss_slash[][] = { "zombie_plague/ghost/claw/zombie_ghost_midslash01.wav" , "zombie_plague/ghost/claw/zombie_ghost_midslash02.wav" }
+new const sound_ghost_miss_wall[][] = { "zombie_plague/ghost/claw/zombie_ghost_draw.wav" }
+new const sound_ghost_hit_normal[][] = { "zombie_plague/ghost/claw/zombie_hit1.wav" , "zombie_plague/ghost/claw/zombie_hit2.wav" , "zombie_plague/ghost/claw/zombie_hit3.wav" , "zombie_plague/ghost/claw/zombie_hit4.wav" }
+new const sound_ghost_hit_stab[][] = { "zombie_plague/ghost/claw/zombie_ghost_stab.wav" , "zombie_plague/ghost/claw/zombie_ghost_stabmiss.wav" }
+new const sound_ghost_idle[][] = { "zombie_plague/ghost/ambience/zombie_ghost_idle01.wav" , "zombie_plague/ghost/ambience/zombie_ghost_idle02.wav" }
+new const sound_ghost_idle_last[][] = { "zombie_plague/ghost/ambience/zombie_ghost_idle03.wav" }
 
 new const Float:size[][3] = {
 	{0.0, 0.0, 1.0}, {0.0, 0.0, -1.0}, {0.0, 1.0, 0.0}, {0.0, -1.0, 0.0}, {1.0, 0.0, 0.0}, {-1.0, 0.0, 0.0}, {-1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}, {1.0, -1.0, 1.0}, {1.0, 1.0, -1.0}, {-1.0, -1.0, 1.0}, {1.0, -1.0, -1.0}, {-1.0, 1.0, -1.0}, {-1.0, -1.0, -1.0},
@@ -79,6 +92,54 @@ public plugin_precache()
 		zp_class_ghost_register_model(g_GhostClassID, ghostclass1_models[index])
 	for (index = 0; index < sizeof ghostclass1_clawmodels; index++)
 		zp_class_ghost_register_claw(g_GhostClassID, ghostclass1_clawmodels[index])
+	
+	sounds_precache();
+}
+
+sounds_precache()
+{
+	// Ghost sounds
+	new Array:ghost_pain = ArrayCreate(SOUND_MAX_LENGTH, 1);
+	new Array:ghost_die = ArrayCreate(SOUND_MAX_LENGTH, 1);
+	new Array:ghost_fall = ArrayCreate(SOUND_MAX_LENGTH, 1);
+	new Array:ghost_miss_slash = ArrayCreate(SOUND_MAX_LENGTH, 1);
+	new Array:ghost_miss_wall = ArrayCreate(SOUND_MAX_LENGTH, 1);
+	new Array:ghost_hit_normal = ArrayCreate(SOUND_MAX_LENGTH, 1);
+	new Array:ghost_hit_stab = ArrayCreate(SOUND_MAX_LENGTH, 1);
+	new Array:ghost_idle = ArrayCreate(SOUND_MAX_LENGTH, 1);
+	new Array:ghost_idle_last = ArrayCreate(SOUND_MAX_LENGTH, 1);
+	
+	new index;
+	for (index = 0; index < sizeof sound_ghost_pain; index++)
+		ArrayPushString(ghost_pain, sound_ghost_pain[index])
+	for (index = 0; index < sizeof sound_ghost_die; index++)
+		ArrayPushString(ghost_die, sound_ghost_die[index])
+	for (index = 0; index < sizeof sound_ghost_fall; index++)
+		ArrayPushString(ghost_fall, sound_ghost_fall[index])
+	for (index = 0; index < sizeof sound_ghost_miss_slash; index++)
+		ArrayPushString(ghost_miss_slash, sound_ghost_miss_slash[index])
+	for (index = 0; index < sizeof sound_ghost_miss_wall; index++)
+		ArrayPushString(ghost_miss_wall, sound_ghost_miss_wall[index])
+	for (index = 0; index < sizeof sound_ghost_hit_normal; index++)
+		ArrayPushString(ghost_hit_normal, sound_ghost_hit_normal[index])
+	for (index = 0; index < sizeof sound_ghost_hit_stab; index++)
+		ArrayPushString(ghost_hit_stab, sound_ghost_hit_stab[index])
+	for (index = 0; index < sizeof sound_ghost_idle; index++)
+		ArrayPushString(ghost_idle, sound_ghost_idle[index])
+	for (index = 0; index < sizeof sound_ghost_idle_last; index++)
+		ArrayPushString(ghost_idle_last, sound_ghost_idle_last[index])
+	
+	zp_ghost_sound_register(g_GhostClassID, ghost_pain, ghost_die, ghost_fall, ghost_miss_slash, ghost_miss_wall, ghost_hit_normal, ghost_hit_stab, ghost_idle, ghost_idle_last);
+	
+	ArrayDestroy(ghost_pain);
+	ArrayDestroy(ghost_die);
+	ArrayDestroy(ghost_fall);
+	ArrayDestroy(ghost_miss_slash);
+	ArrayDestroy(ghost_miss_wall);
+	ArrayDestroy(ghost_hit_normal);
+	ArrayDestroy(ghost_hit_stab);
+	ArrayDestroy(ghost_idle);
+	ArrayDestroy(ghost_idle_last);
 }
 
 // Ham Player Spawn Post Forward
