@@ -127,6 +127,33 @@ public plugin_precache()
 	}
 }
 
+public plugin_natives()
+{
+	register_library("zp50_zombie_sounds");
+	register_native("zp_zombie_sound_register", "native_zombie_sound_register");
+	register_native("zp_ghost_sound_register", "native_ghost_sound_register");
+	register_native("zp_human_sound_register", "native_human_sound_register");
+	register_native("zp_survivor_sound_register", "native_survivor_sound_register");
+	register_native("zp_nemesis_sound_register", "native_nemesis_sound_register");
+	
+	set_module_filter("module_filter");
+	set_native_filter("native_filter");
+}
+public module_filter(const module[])
+{
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST))
+		return PLUGIN_HANDLED;
+	
+	return PLUGIN_CONTINUE;
+}
+public native_filter(const name[], index, trap)
+{
+	if (!trap)
+		return PLUGIN_HANDLED;
+		
+	return PLUGIN_CONTINUE;
+}
+
 sound_arrays_initialize()
 {
 	// Initialize arrays
@@ -584,8 +611,8 @@ public native_human_sound_register(plugin_id, num_params)
 	new Array:sound_miss_wall = Array:get_param(6);
 	new Array:sound_hit_normal = Array:get_param(7);
 	new Array:sound_hit_stab = Array:get_param(8);
-	new Array:sound_idle = Array:get_param(9);
-	new Array:sound_idle_last = Array:get_param(10);
+	new Array:sound_idle = Invalid_Array;
+	new Array:sound_idle_last = Invalid_Array;
 	
 	return RegSoundArray(human_class, SoundTeam_Human, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last);
 }
@@ -600,8 +627,8 @@ public native_survivor_sound_register(plugin_id, num_params)
 	new Array:sound_miss_wall = Array:get_param(6);
 	new Array:sound_hit_normal = Array:get_param(7);
 	new Array:sound_hit_stab = Array:get_param(8);
-	new Array:sound_idle = Array:get_param(9);
-	new Array:sound_idle_last = Array:get_param(10);
+	new Array:sound_idle = Invalid_Array;
+	new Array:sound_idle_last = Invalid_Array;
 	
 	return RegSoundArray(survivor_class, SoundTeam_Survivor, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last);
 }
@@ -917,33 +944,6 @@ bool:GetCustomRandomSound(sound_id, SoundTeam:sound_team, sound_type, sound[])
 	return (strlen(sound) > 0);
 }
 
-public plugin_natives()
-{
-	register_library("zp50_zombie_sounds");
-	register_native("zp_zombie_sound_register", "native_zombie_sound_register");
-	register_native("zp_ghost_sound_register", "native_ghost_sound_register");
-	register_native("zp_human_sound_register", "native_human_sound_register");
-	register_native("zp_survivor_sound_register", "native_survivor_sound_register");
-	register_native("zp_nemesis_sound_register", "native_nemesis_sound_register");
-	
-	set_module_filter("module_filter");
-	set_native_filter("native_filter");
-}
-public module_filter(const module[])
-{
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST))
-		return PLUGIN_HANDLED;
-	
-	return PLUGIN_CONTINUE;
-}
-public native_filter(const name[], index, trap)
-{
-	if (!trap)
-		return PLUGIN_HANDLED;
-		
-	return PLUGIN_CONTINUE;
-}
-
 // Emit Sound Forward
 public fw_EmitSound(id, channel, const sample[], Float:volume, Float:attn, flags, pitch)
 {
@@ -1049,21 +1049,24 @@ public zp_fw_core_infect_post(id, attacker)
 	// Remove previous tasks
 	remove_task(id+TASK_IDLE_SOUNDS)
 	
-	// Ghost Class loaded
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(id))
+	// Idle sounds?
+	if (get_pcvar_num(cvar_zombie_sounds_idle))
 	{
-		// Idle sounds?
-		if (get_pcvar_num(cvar_zombie_sounds_idle))
-			set_task(random_float(50.0, 70.0), "zombie_idle_sounds", id+TASK_IDLE_SOUNDS, _, _, "b")
-		return;
-	}
-	
-	// Nemesis Class loaded?
-	if (!LibraryExists(LIBRARY_NEMESIS, LibType_Library) || !zp_class_nemesis_get(id))
-	{
-		// Idle sounds?
-		if (get_pcvar_num(cvar_zombie_sounds_idle))
-			set_task(random_float(50.0, 70.0), "zombie_idle_sounds", id+TASK_IDLE_SOUNDS, _, _, "b")
+		switch(GetClientSoundTeam(id))
+		{
+			case SoundTeam_Ghost:
+			{
+				set_task(random_float(50.0, 70.0), "zombie_idle_sounds", id+TASK_IDLE_SOUNDS, _, _, "b");
+			}
+			case SoundTeam_Zombie:
+			{
+				set_task(random_float(50.0, 70.0), "zombie_idle_sounds", id+TASK_IDLE_SOUNDS, _, _, "b");
+			}
+			case SoundTeam_Nemesis:
+			{
+				set_task(random_float(50.0, 70.0), "zombie_idle_sounds", id+TASK_IDLE_SOUNDS, _, _, "b");
+			}
+		}
 	}
 }
 
