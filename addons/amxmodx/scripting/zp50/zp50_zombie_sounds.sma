@@ -25,6 +25,8 @@
 #define LIBRARY_GHOST "zp50_class_ghost"
 #include <zp50_class_ghost>
 
+#define ZP_INVALID_TEAM_CLASS -1
+
 enum SoundTeam{
 	SoundTeam_Human = 0,
 	SoundTeam_Ghost,
@@ -46,7 +48,8 @@ enum SoundType{
 };
 
 enum _:SoundInfo{
-	SoundInfo_SoundId = 0,
+	SoundInfo_FileIndex = 0,
+	SoundInfo_TeamClass,
 	SoundType:SoundInfo_Type,
 	SoundTeam:SoundInfo_Team
 };
@@ -83,11 +86,6 @@ new const sound_ghost_idle_last[][] = { "zombie_plague/ghost/ambience/zombie_gho
 #define SOUND_MAX_LENGTH 64
 
 // Custom sounds
-new Array:g_ghost_ids;
-new Array:g_human_ids;
-new Array:g_zombie_ids;
-new Array:g_nemesis_ids;
-new Array:g_survivor_ids;
 new Array:g_sound_files;
 new Array:g_sound_infos;
 
@@ -118,7 +116,6 @@ public plugin_precache()
 	zombie_precache();
 	nemesis_precache();
 	ghost_precache();
-	PrecacheSoundArray();
 }
 
 public plugin_natives()
@@ -151,16 +148,6 @@ public native_filter(const name[], index, trap)
 sound_arrays_initialize()
 {
 	// Initialize arrays
-	if(g_ghost_ids == Invalid_Array)
-		g_ghost_ids = ArrayCreate(1, 1);
-	if(g_human_ids == Invalid_Array)
-		g_human_ids = ArrayCreate(1, 1);
-	if(g_zombie_ids == Invalid_Array)
-		g_zombie_ids = ArrayCreate(1, 1);
-	if(g_nemesis_ids == Invalid_Array)
-		g_nemesis_ids = ArrayCreate(1, 1);
-	if(g_survivor_ids == Invalid_Array)
-		g_survivor_ids = ArrayCreate(1, 1);
 	if(g_sound_files == Invalid_Array)
 		g_sound_files = ArrayCreate(SOUND_MAX_LENGTH, 1);
 	if(g_sound_infos == Invalid_Array)
@@ -273,47 +260,47 @@ ghost_precache()
 		for (index = 0; index < ArraySize(ghost_pain); index++)
 		{
 			ArrayGetString(ghost_pain, index, sound, charsmax(sound));
-			AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Ghost, SoundType_Pain);
+			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_Pain);
 		}
 		for (index = 0; index < ArraySize(ghost_die); index++)
 		{
 			ArrayGetString(ghost_die, index, sound, charsmax(sound));
-			AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Ghost, SoundType_Die);
+			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_Die);
 		}
 		for (index = 0; index < ArraySize(ghost_fall); index++)
 		{
 			ArrayGetString(ghost_fall, index, sound, charsmax(sound));
-			AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Ghost, SoundType_Fall);
+			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_Fall);
 		}
 		for (index = 0; index < ArraySize(ghost_miss_slash); index++)
 		{
 			ArrayGetString(ghost_miss_slash, index, sound, charsmax(sound));
-			AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Ghost, SoundType_MissSlash);
+			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_MissSlash);
 		}
 		for (index = 0; index < ArraySize(ghost_miss_wall); index++)
 		{
 			ArrayGetString(ghost_miss_wall, index, sound, charsmax(sound));
-			AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Ghost, SoundType_MissWall);
+			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_MissWall);
 		}
 		for (index = 0; index < ArraySize(ghost_hit_normal); index++)
 		{
 			ArrayGetString(ghost_hit_normal, index, sound, charsmax(sound));
-			AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Ghost, SoundType_HitNormal);
+			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_HitNormal);
 		}
 		for (index = 0; index < ArraySize(ghost_hit_stab); index++)
 		{
 			ArrayGetString(ghost_hit_stab, index, sound, charsmax(sound));
-			AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Ghost, SoundType_HitStab);
+			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_HitStab);
 		}
 		for (index = 0; index < ArraySize(ghost_idle); index++)
 		{
 			ArrayGetString(ghost_idle, index, sound, charsmax(sound));
-			AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Ghost, SoundType_Idle);
+			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_Idle);
 		}
 		for (index = 0; index < ArraySize(ghost_idle_last); index++)
 		{
 			ArrayGetString(ghost_idle_last, index, sound, charsmax(sound));
-			AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Ghost, SoundType_IdleLast);
+			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_IdleLast);
 		}
 	}
 	ArrayDestroy(ghost_pain);
@@ -352,7 +339,7 @@ nemesis_precache()
 		for (new index = 0; index < ArraySize(nemesis_pain); index++)
 		{
 			ArrayGetString(nemesis_pain, index, sound, charsmax(sound))
-			AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Nemesis, SoundType_Pain);
+			AddSoundFileArray(sound, SoundTeam_Nemesis, SoundType_Pain);
 		}
 	}
 	ArrayDestroy(nemesis_pain);
@@ -461,47 +448,47 @@ zombie_precache()
 	for (index = 0; index < ArraySize(sound_pain); index++)
 	{
 		ArrayGetString(sound_pain, index, sound, charsmax(sound));
-		AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Zombie, SoundType_Pain);
+		AddSoundFileArray(sound, SoundTeam_Zombie, SoundType_Pain);
 	}
 	for (index = 0; index < ArraySize(sound_die); index++)
 	{
 		ArrayGetString(sound_die, index, sound, charsmax(sound));
-		AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Zombie, SoundType_Die);
+		AddSoundFileArray(sound, SoundTeam_Zombie, SoundType_Die);
 	}
 	for (index = 0; index < ArraySize(sound_fall); index++)
 	{
 		ArrayGetString(sound_fall, index, sound, charsmax(sound));
-		AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Zombie, SoundType_Fall);
+		AddSoundFileArray(sound, SoundTeam_Zombie, SoundType_Fall);
 	}
 	for (index = 0; index < ArraySize(sound_miss_slash); index++)
 	{
 		ArrayGetString(sound_miss_slash, index, sound, charsmax(sound));
-		AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Zombie, SoundType_MissSlash);
+		AddSoundFileArray(sound, SoundTeam_Zombie, SoundType_MissSlash);
 	}
 	for (index = 0; index < ArraySize(sound_miss_wall); index++)
 	{
 		ArrayGetString(sound_miss_wall, index, sound, charsmax(sound));
-		AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Zombie, SoundType_MissWall);
+		AddSoundFileArray(sound, SoundTeam_Zombie, SoundType_MissWall);
 	}
 	for (index = 0; index < ArraySize(sound_hit_normal); index++)
 	{
 		ArrayGetString(sound_hit_normal, index, sound, charsmax(sound));
-		AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Zombie, SoundType_HitNormal);
+		AddSoundFileArray(sound, SoundTeam_Zombie, SoundType_HitNormal);
 	}
 	for (index = 0; index < ArraySize(sound_hit_stab); index++)
 	{
 		ArrayGetString(sound_hit_stab, index, sound, charsmax(sound));
-		AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Zombie, SoundType_HitStab);
+		AddSoundFileArray(sound, SoundTeam_Zombie, SoundType_HitStab);
 	}
 	for (index = 0; index < ArraySize(sound_idle); index++)
 	{
 		ArrayGetString(sound_idle, index, sound, charsmax(sound));
-		AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Zombie, SoundType_Idle);
+		AddSoundFileArray(sound, SoundTeam_Zombie, SoundType_Idle);
 	}
 	for (index = 0; index < ArraySize(sound_idle_last); index++)
 	{
 		ArrayGetString(sound_idle_last, index, sound, charsmax(sound));
-		AddSoundArray(sound, ZP_INVALID_SOUND_ID, SoundTeam_Zombie, SoundType_IdleLast);
+		AddSoundFileArray(sound, SoundTeam_Zombie, SoundType_IdleLast);
 	}
 	
 	ArrayDestroy(sound_pain);
@@ -565,14 +552,14 @@ public native_human_sound_register(plugin_id, num_params)
 
 public native_survivor_sound_register(plugin_id, num_params)
 {
-	new survivor_class = get_param(1);
-	new Array:sound_pain = Array:get_param(2);
-	new Array:sound_die = Array:get_param(3);
-	new Array:sound_fall = Array:get_param(4);
-	new Array:sound_miss_slash = Array:get_param(5);
-	new Array:sound_miss_wall = Array:get_param(6);
-	new Array:sound_hit_normal = Array:get_param(7);
-	new Array:sound_hit_stab = Array:get_param(8);
+	new survivor_class = 0;
+	new Array:sound_pain = Array:get_param(1);
+	new Array:sound_die = Array:get_param(2);
+	new Array:sound_fall = Array:get_param(3);
+	new Array:sound_miss_slash = Array:get_param(4);
+	new Array:sound_miss_wall = Array:get_param(5);
+	new Array:sound_hit_normal = Array:get_param(6);
+	new Array:sound_hit_stab = Array:get_param(7);
 	new Array:sound_idle = Invalid_Array;
 	new Array:sound_idle_last = Invalid_Array;
 	
@@ -581,71 +568,30 @@ public native_survivor_sound_register(plugin_id, num_params)
 
 public native_nemesis_sound_register(plugin_id, num_params)
 {
-	new nemesis_class = get_param(1);
-	new Array:sound_pain = Array:get_param(2);
-	new Array:sound_die = Array:get_param(3);
-	new Array:sound_fall = Array:get_param(4);
-	new Array:sound_miss_slash = Array:get_param(5);
-	new Array:sound_miss_wall = Array:get_param(6);
-	new Array:sound_hit_normal = Array:get_param(7);
-	new Array:sound_hit_stab = Array:get_param(8);
-	new Array:sound_idle = Array:get_param(9);
-	new Array:sound_idle_last = Array:get_param(10);
+	new nemesis_class = 0;
+	new Array:sound_pain = Array:get_param(1);
+	new Array:sound_die = Array:get_param(2);
+	new Array:sound_fall = Array:get_param(3);
+	new Array:sound_miss_slash = Array:get_param(4);
+	new Array:sound_miss_wall = Array:get_param(5);
+	new Array:sound_hit_normal = Array:get_param(6);
+	new Array:sound_hit_stab = Array:get_param(7);
+	new Array:sound_idle = Array:get_param(8);
+	new Array:sound_idle_last = Array:get_param(9);
 	
 	return RegSoundArray(nemesis_class, SoundTeam_Nemesis, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last);
 }
 
 RegSoundArray(team_class, SoundTeam:sound_team, &Array:sound_pain = Invalid_Array, &Array:sound_die = Invalid_Array, &Array:sound_fall = Invalid_Array, &Array:sound_miss_slash = Invalid_Array, &Array:sound_miss_wall = Invalid_Array, &Array:sound_hit_normal = Invalid_Array, &Array:sound_hit_stab = Invalid_Array, &Array:sound_idle = Invalid_Array, &Array:sound_idle_last = Invalid_Array)
 {
-	// Initialize arrays
-	sound_arrays_initialize();
-	
-	new sound[SOUND_MAX_LENGTH];
-	new sound_id = GetSoundArrayIndex(team_class, sound_team);
-	if(sound_id < 0)
-	{
-		switch(sound_team)
-		{
-			case SoundTeam_Human:
-			{
-				ArrayPushCell(g_human_ids, team_class);
-				sound_id = ArraySize(g_human_ids) - 1;
-			}
-			case SoundTeam_Ghost:
-			{
-				ArrayPushCell(g_ghost_ids, team_class);
-				sound_id = ArraySize(g_ghost_ids) - 1;
-			}
-			case SoundTeam_Zombie:
-			{
-				ArrayPushCell(g_zombie_ids, team_class);
-				sound_id = ArraySize(g_zombie_ids) - 1;
-			}
-			case SoundTeam_Nemesis:
-			{
-				ArrayPushCell(g_nemesis_ids, team_class);
-				sound_id = ArraySize(g_nemesis_ids) - 1;
-			}
-			case SoundTeam_Survivor:
-			{
-				ArrayPushCell(g_survivor_ids, team_class);
-				sound_id = ArraySize(g_survivor_ids) - 1;
-			}
-		}
-	}
-	else
-	{
-		return sound_id;
-	}
-	
 	new index;
+	new sound[SOUND_MAX_LENGTH];
 	if(sound_pain != Invalid_Array)
 	{
 		for (index = 0; index < ArraySize(sound_pain); index++)
 		{
 			ArrayGetString(sound_pain, index, sound, charsmax(sound));
-			if(AddSoundArray(sound, sound_id, sound_team, SoundType_Pain))
-				precache_sound(sound);
+			AddSoundFileArray(sound, sound_team, SoundType_Pain, team_class);
 		}
 	}
 	if(sound_die != Invalid_Array)
@@ -653,8 +599,7 @@ RegSoundArray(team_class, SoundTeam:sound_team, &Array:sound_pain = Invalid_Arra
 		for (index = 0; index < ArraySize(sound_die); index++)
 		{
 			ArrayGetString(sound_die, index, sound, charsmax(sound));
-			if(AddSoundArray(sound, sound_id, sound_team, SoundType_Die))
-				precache_sound(sound);
+			AddSoundFileArray(sound, sound_team, SoundType_Die, team_class);
 		}
 	}
 	if(sound_fall != Invalid_Array)
@@ -662,8 +607,7 @@ RegSoundArray(team_class, SoundTeam:sound_team, &Array:sound_pain = Invalid_Arra
 		for (index = 0; index < ArraySize(sound_fall); index++)
 		{
 			ArrayGetString(sound_fall, index, sound, charsmax(sound));
-			if(AddSoundArray(sound, sound_id, sound_team, SoundType_Fall))
-				precache_sound(sound);
+			AddSoundFileArray(sound, sound_team, SoundType_Fall, team_class);
 		}
 	}
 	if(sound_miss_slash != Invalid_Array)
@@ -671,8 +615,7 @@ RegSoundArray(team_class, SoundTeam:sound_team, &Array:sound_pain = Invalid_Arra
 		for (index = 0; index < ArraySize(sound_miss_slash); index++)
 		{
 			ArrayGetString(sound_miss_slash, index, sound, charsmax(sound));
-			if(AddSoundArray(sound, sound_id, sound_team, SoundType_MissSlash))
-				precache_sound(sound);
+			AddSoundFileArray(sound, sound_team, SoundType_MissSlash, team_class);
 		}
 	}
 	if(sound_miss_wall != Invalid_Array)
@@ -680,8 +623,7 @@ RegSoundArray(team_class, SoundTeam:sound_team, &Array:sound_pain = Invalid_Arra
 		for (index = 0; index < ArraySize(sound_miss_wall); index++)
 		{
 			ArrayGetString(sound_miss_wall, index, sound, charsmax(sound));
-			if(AddSoundArray(sound, sound_id, sound_team, SoundType_MissWall))
-				precache_sound(sound);
+			AddSoundFileArray(sound, sound_team, SoundType_MissWall, team_class);
 		}
 	}
 	if(sound_hit_normal != Invalid_Array)
@@ -689,8 +631,7 @@ RegSoundArray(team_class, SoundTeam:sound_team, &Array:sound_pain = Invalid_Arra
 		for (index = 0; index < ArraySize(sound_hit_normal); index++)
 		{
 			ArrayGetString(sound_hit_normal, index, sound, charsmax(sound));
-			if(AddSoundArray(sound, sound_id, sound_team, SoundType_HitNormal))
-				precache_sound(sound);
+			AddSoundFileArray(sound, sound_team, SoundType_HitNormal, team_class);
 		}
 	}
 	if(sound_hit_stab != Invalid_Array)
@@ -698,8 +639,7 @@ RegSoundArray(team_class, SoundTeam:sound_team, &Array:sound_pain = Invalid_Arra
 		for (index = 0; index < ArraySize(sound_hit_stab); index++)
 		{
 			ArrayGetString(sound_hit_stab, index, sound, charsmax(sound));
-			if(AddSoundArray(sound, sound_id, sound_team, SoundType_HitStab))
-				precache_sound(sound);
+			AddSoundFileArray(sound, sound_team, SoundType_HitStab, team_class);
 		}
 	}
 	if(sound_idle != Invalid_Array)
@@ -707,8 +647,7 @@ RegSoundArray(team_class, SoundTeam:sound_team, &Array:sound_pain = Invalid_Arra
 		for (index = 0; index < ArraySize(sound_idle); index++)
 		{
 			ArrayGetString(sound_idle, index, sound, charsmax(sound));
-			if(AddSoundArray(sound, sound_id, sound_team, SoundType_Idle))
-				precache_sound(sound);
+			AddSoundFileArray(sound, sound_team, SoundType_Idle, team_class);
 		}
 	}
 	if(sound_idle_last != Invalid_Array)
@@ -716,121 +655,86 @@ RegSoundArray(team_class, SoundTeam:sound_team, &Array:sound_pain = Invalid_Arra
 		for (index = 0; index < ArraySize(sound_idle_last); index++)
 		{
 			ArrayGetString(sound_idle_last, index, sound, charsmax(sound));
-			if(AddSoundArray(sound, sound_id, sound_team, SoundType_IdleLast))
-				precache_sound(sound);
+			AddSoundFileArray(sound, sound_team, SoundType_IdleLast, team_class);
 		}
 	}
-	return sound_id;
+	return index;
 }
 
-bool:AddSoundArray(sound[], sound_id, SoundTeam:sound_team, SoundType:sound_type)
+AddSoundFileArray(sound[], SoundTeam:sound_team, SoundType:sound_type, team_class = ZP_INVALID_TEAM_CLASS)
 {
 	if(strlen(sound))
 	{
+		sound_arrays_initialize();
+		
 		new info[SoundInfo];
-		info[SoundInfo_SoundId] = sound_id;
 		info[SoundInfo_Team] = _:sound_team;
 		info[SoundInfo_Type] = _:sound_type;
-		ArrayPushString(g_sound_files, sound);
-		ArrayPushArray(g_sound_infos, info);
-		return true;
-	}
-	return false;
-}
-
-PrecacheSoundArray()
-{
-	// Precache sounds
-	for (new index = 0; index < ArraySize(g_sound_files); index++)
-	{
-		new sound[SOUND_MAX_LENGTH];
-		ArrayGetString(g_sound_files, index, sound, charsmax(sound));
-		if(strlen(sound))
+		info[SoundInfo_TeamClass] = team_class;
+		new index = GetSoundFileArrayIndex(sound);
+		if(index >= 0)
+		{
+			info[SoundInfo_FileIndex] = index;
+		}
+		else
+		{
 			precache_sound(sound);
+			info[SoundInfo_FileIndex] = ArraySize(g_sound_files);
+			ArrayPushString(g_sound_files, sound);
+		}
+		ArrayPushArray(g_sound_infos, info);
+		return info[SoundInfo_FileIndex];
 	}
+	return ZP_INVALID_SOUND_ID;
 }
 
-GetSoundArrayIndex(team_class, SoundTeam:sound_team)
+GetSoundFileArrayIndex(sound[])
 {
-	switch(sound_team)
+	if(strlen(sound) && (g_sound_files != Invalid_Array))
 	{
-		case SoundTeam_Human:
+		for (new index = 0; index < ArraySize(g_sound_files); index++)
 		{
-			for (new index = 0; index < ArraySize(g_human_ids); index++)
-			{
-				if(ArrayGetCell(g_human_ids, index) == team_class)
-					return index;
-			}
-		}
-		case SoundTeam_Ghost:
-		{
-			for (new index = 0; index < ArraySize(g_ghost_ids); index++)
-			{
-				if(ArrayGetCell(g_ghost_ids, index) == team_class)
-					return index;
-			}
-		}
-		case SoundTeam_Zombie:
-		{
-			for (new index = 0; index < ArraySize(g_zombie_ids); index++)
-			{
-				if(ArrayGetCell(g_zombie_ids, index) == team_class)
-					return index;
-			}
-		}
-		case SoundTeam_Nemesis:
-		{
-			for (new index = 0; index < ArraySize(g_nemesis_ids); index++)
-			{
-				if(ArrayGetCell(g_nemesis_ids, index) == team_class)
-					return index;
-			}
-		}
-		case SoundTeam_Survivor:
-		{
-			for (new index = 0; index < ArraySize(g_survivor_ids); index++)
-			{
-				if(ArrayGetCell(g_survivor_ids, index) == team_class)
-					return index;
-			}
+			new temp[SOUND_MAX_LENGTH];
+			ArrayGetString(g_sound_files, index, temp, SOUND_MAX_LENGTH);
+			if(equal(sound, temp))
+				return index;
 		}
 	}
 	return ZP_INVALID_SOUND_ID;
 }
 
-GetClientSoundId(client)
+GetClientSoundTeamClass(client)
 {
-	new SoundTeam:sound_team = GetClientSoundTeam(client);
-	switch(sound_team)
+	switch(GetClientSoundTeam(client))
 	{
 		case SoundTeam_Human:
 		{
 			new human_class = zp_class_human_get_current(client);
 			if(human_class != ZP_INVALID_HUMAN_CLASS)
-				return GetSoundArrayIndex(human_class, SoundTeam_Human);
+				return human_class;
 		}
 		case SoundTeam_Ghost:
 		{
 			new ghost_class = zp_class_ghost_get_current(client);
 			if(ghost_class != ZP_INVALID_GHOST_CLASS)
-				return GetSoundArrayIndex(ghost_class, SoundTeam_Ghost);
+				return ghost_class;
 		}
 		case SoundTeam_Zombie:
 		{
 			new zombie_class = zp_class_zombie_get_current(client);
 			if(zombie_class != ZP_INVALID_ZOMBIE_CLASS)
-				return GetSoundArrayIndex(zombie_class, SoundTeam_Zombie);
+				return zombie_class;
 		}
 		case SoundTeam_Nemesis:
 		{
-			return GetSoundArrayIndex(ZP_INVALID_SOUND_ID, SoundTeam_Nemesis);
+			return 0;
 		}
 		case SoundTeam_Survivor:
 		{
-			return GetSoundArrayIndex(ZP_INVALID_SOUND_ID, SoundTeam_Survivor);
+			return 0;
 		}
 	}
-	return ZP_INVALID_SOUND_ID;
+	return ZP_INVALID_TEAM_CLASS;
 }
 
 SoundTeam:GetClientSoundTeam(client)
@@ -854,17 +758,17 @@ SoundTeam:GetClientSoundTeam(client)
 	return SoundTeam_Human;
 }
 
-GetCustomSoundArray(sound_id, SoundTeam:sound_team, SoundType:sound_type, &Array:sound_array)
+GetCustomSoundArray(team_class, SoundTeam:sound_team, SoundType:sound_type, &Array:sound_array)
 {
 	new count = 0;
 	for (new index = 0; index < ArraySize(g_sound_infos); index++)
 	{
 		new info[SoundInfo];
 		ArrayGetArray(g_sound_infos, index, info);
-		if(info[SoundInfo_SoundId] == sound_id && info[SoundInfo_Team] == sound_team && info[SoundInfo_Type] == sound_type)
+		if(info[SoundInfo_Team] == sound_team && info[SoundInfo_TeamClass] == team_class && info[SoundInfo_Type] == sound_type && info[SoundInfo_FileIndex] >= 0)
 		{
 			new sound[SOUND_MAX_LENGTH];
-			ArrayGetString(g_sound_files, index, sound, charsmax(sound));
+			ArrayGetString(g_sound_files, info[SoundInfo_FileIndex], sound, charsmax(sound));
 			ArrayPushString(sound_array, sound);
 			count++;
 		}
@@ -872,19 +776,19 @@ GetCustomSoundArray(sound_id, SoundTeam:sound_team, SoundType:sound_type, &Array
 	return count;
 }
 
-bool:GetCustomRandomSound(sound_id, SoundTeam:sound_team, SoundType:sound_type, sound[])
+bool:GetCustomRandomSound(team_class, SoundTeam:sound_team, SoundType:sound_type, sound[])
 {
 	new Array:sound_array = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new count = GetCustomSoundArray(sound_id, sound_team, sound_type, sound_array);
+	new count = GetCustomSoundArray(team_class, sound_team, sound_type, sound_array);
 	format(sound, SOUND_MAX_LENGTH, "");
 	if(count > 0)
 	{
 		ArrayGetString(sound_array, random_num(0, ArraySize(sound_array) - 1), sound, SOUND_MAX_LENGTH);
 	}
-	else if(sound_id != ZP_INVALID_SOUND_ID)
+	else if(team_class != ZP_INVALID_TEAM_CLASS)
 	{
 		ArrayClear(sound_array);
-		count = GetCustomSoundArray(ZP_INVALID_SOUND_ID, sound_team, sound_type, sound_array);
+		count = GetCustomSoundArray(ZP_INVALID_TEAM_CLASS, sound_team, sound_type, sound_array);
 		if(count > 0)
 			ArrayGetString(sound_array, random_num(0, ArraySize(sound_array) - 1), sound, SOUND_MAX_LENGTH);
 	}
@@ -905,7 +809,7 @@ public fw_EmitSound(id, channel, const sample[], Float:volume, Float:attn, flags
 		// Zombie being hit
 		if (sample[7] == 'b' && sample[8] == 'h' && sample[9] == 'i' && sample[10] == 't')
 		{
-			if(GetCustomRandomSound(GetClientSoundId(id), GetClientSoundTeam(id), SoundType_Pain, sound))
+			if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_Pain, sound))
 			{
 				emit_sound(id, channel, sound, volume, attn, flags, pitch);
 				return FMRES_SUPERCEDE;
@@ -916,7 +820,7 @@ public fw_EmitSound(id, channel, const sample[], Float:volume, Float:attn, flags
 		// Zombie dies
 		if (sample[7] == 'd' && ((sample[8] == 'i' && sample[9] == 'e') || (sample[8] == 'e' && sample[9] == 'a')))
 		{
-			if(GetCustomRandomSound(GetClientSoundId(id), GetClientSoundTeam(id), SoundType_Die, sound))
+			if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_Die, sound))
 			{
 				emit_sound(id, channel, sound, volume, attn, flags, pitch);
 				return FMRES_SUPERCEDE;
@@ -927,7 +831,7 @@ public fw_EmitSound(id, channel, const sample[], Float:volume, Float:attn, flags
 		// Zombie falls off
 		if (sample[10] == 'f' && sample[11] == 'a' && sample[12] == 'l' && sample[13] == 'l')
 		{
-			if(GetCustomRandomSound(GetClientSoundId(id), GetClientSoundTeam(id), SoundType_Fall, sound))
+			if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_Fall, sound))
 			{
 				emit_sound(id, channel, sound, volume, attn, flags, pitch);
 				return FMRES_SUPERCEDE;
@@ -943,7 +847,7 @@ public fw_EmitSound(id, channel, const sample[], Float:volume, Float:attn, flags
 		{
 			if (sample[14] == 's' && sample[15] == 'l' && sample[16] == 'a') // slash
 			{
-				if(GetCustomRandomSound(GetClientSoundId(id), GetClientSoundTeam(id), SoundType_MissSlash, sound))
+				if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_MissSlash, sound))
 				{
 					emit_sound(id, channel, sound, volume, attn, flags, pitch);
 					return FMRES_SUPERCEDE;
@@ -953,13 +857,13 @@ public fw_EmitSound(id, channel, const sample[], Float:volume, Float:attn, flags
 			{
 				if (sample[17] == 'w') // wall
 				{
-					if(GetCustomRandomSound(GetClientSoundId(id), GetClientSoundTeam(id), SoundType_MissWall, sound))
+					if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_MissWall, sound))
 					{
 						emit_sound(id, channel, sound, volume, attn, flags, pitch);
 						return FMRES_SUPERCEDE;
 					}
 				}
-				else if(GetCustomRandomSound(GetClientSoundId(id), GetClientSoundTeam(id), SoundType_HitNormal, sound))
+				else if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_HitNormal, sound))
 				{
 					emit_sound(id, channel, sound, volume, attn, flags, pitch);
 					return FMRES_SUPERCEDE;
@@ -967,7 +871,7 @@ public fw_EmitSound(id, channel, const sample[], Float:volume, Float:attn, flags
 			}
 			else if (sample[14] == 's' && sample[15] == 't' && sample[16] == 'a') // stab
 			{
-				if(GetCustomRandomSound(GetClientSoundId(id), GetClientSoundTeam(id), SoundType_HitStab, sound))
+				if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_HitStab, sound))
 				{
 					emit_sound(id, channel, sound, volume, attn, flags, pitch);
 					return FMRES_SUPERCEDE;
@@ -1032,12 +936,12 @@ public zombie_idle_sounds(taskid)
 	// Last zombie?
 	if (zp_core_is_last_zombie(ID_IDLE_SOUNDS))
 	{
-		if(GetCustomRandomSound(GetClientSoundId(ID_IDLE_SOUNDS), GetClientSoundTeam(ID_IDLE_SOUNDS), SoundType_IdleLast, sound))
+		if(GetCustomRandomSound(GetClientSoundTeamClass(ID_IDLE_SOUNDS), GetClientSoundTeam(ID_IDLE_SOUNDS), SoundType_IdleLast, sound))
 			emit_sound(ID_IDLE_SOUNDS, CHAN_VOICE, sound, 1.0, ATTN_NORM, 0, PITCH_NORM);
 	}
 	else
 	{
-		if(GetCustomRandomSound(GetClientSoundId(ID_IDLE_SOUNDS), GetClientSoundTeam(ID_IDLE_SOUNDS), SoundType_Idle, sound))
+		if(GetCustomRandomSound(GetClientSoundTeamClass(ID_IDLE_SOUNDS), GetClientSoundTeam(ID_IDLE_SOUNDS), SoundType_Idle, sound))
 			emit_sound(ID_IDLE_SOUNDS, CHAN_VOICE, sound, 1.0, ATTN_NORM, 0, PITCH_NORM);
 	}
 }

@@ -1,5 +1,4 @@
 #include <amxmodx>
-#include <zp50_class_nemesis>
 #include <zp50_zombie_sounds>
 
 #define SOUND_MAX_LENGTH 64
@@ -17,7 +16,7 @@ new const sound_nemesis_idle_last[][] = { "nihilanth/nil_thelast.wav" }
 
 public plugin_precache()
 {
-	register_plugin("[ZP] Sound: Nemesis", ZP_VERSION_STRING, "Mostten")
+	register_plugin("[ZP] Sound: Nemesis", "0.1", "Mostten")
 	
 	new Array:nemesis_pain = ArrayCreate(SOUND_MAX_LENGTH, 1);
 	new Array:nemesis_die = ArrayCreate(SOUND_MAX_LENGTH, 1);
@@ -49,7 +48,7 @@ public plugin_precache()
 	for (index = 0; index < sizeof sound_nemesis_idle_last; index++)
 		ArrayPushString(nemesis_idle_last, sound_nemesis_idle_last[index])
 	
-	zp_nemesis_sound_register(ZP_INVALID_SOUND_ID, nemesis_pain, nemesis_die, nemesis_fall, nemesis_miss_slash, nemesis_miss_wall, nemesis_hit_normal, nemesis_hit_stab, nemesis_idle, nemesis_idle_last);
+	zp_nemesis_sound_register(nemesis_pain, nemesis_die, nemesis_fall, nemesis_miss_slash, nemesis_miss_wall, nemesis_hit_normal, nemesis_hit_stab, nemesis_idle, nemesis_idle_last);
 	
 	ArrayDestroy(nemesis_pain);
 	ArrayDestroy(nemesis_die);

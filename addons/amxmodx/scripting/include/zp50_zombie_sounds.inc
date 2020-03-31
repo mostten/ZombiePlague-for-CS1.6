@@ -74,7 +74,6 @@ native zp_human_sound_register(human_class, Array:sound_pain = Invalid_Array, Ar
  *
  * Note: The returned sounds ID can be later used to identify
  *
- * @param survivor_class		class id.
  * @param sound_pain		pain.
  * @param sound_die			die.
  * @param sound_fall		fall.
@@ -84,14 +83,13 @@ native zp_human_sound_register(human_class, Array:sound_pain = Invalid_Array, Ar
  * @param sound_hit_stab	hit stab.
  * @return					An internal survivor sounds ID, or ZP_INVALID_SOUND_CLASS on failure.
  */
-native zp_survivor_sound_register(survivor_class, Array:sound_pain = Invalid_Array, Array:sound_die = Invalid_Array, Array:sound_fall = Invalid_Array, Array:sound_miss_slash = Invalid_Array, Array:sound_miss_wall = Invalid_Array, Array:sound_hit_normal = Invalid_Array, Array:sound_hit_stab = Invalid_Array);
+native zp_survivor_sound_register(Array:sound_pain = Invalid_Array, Array:sound_die = Invalid_Array, Array:sound_fall = Invalid_Array, Array:sound_miss_slash = Invalid_Array, Array:sound_miss_wall = Invalid_Array, Array:sound_hit_normal = Invalid_Array, Array:sound_hit_stab = Invalid_Array);
 
 /**
  * Registers a custom sounds which will be added to the nemesis sounds of ZP.
  *
  * Note: The returned sounds ID can be later used to identify
  *
- * @param nemesis_class		class id.
  * @param sound_pain		pain.
  * @param sound_die			die.
  * @param sound_fall		fall.
@@ -103,7 +101,7 @@ native zp_survivor_sound_register(survivor_class, Array:sound_pain = Invalid_Arr
  * @param sound_idle_last	idle last.
  * @return					An internal nemesis sounds ID, or ZP_INVALID_SOUND_CLASS on failure.
  */
-native zp_nemesis_sound_register(nemesis_class, Array:sound_pain = Invalid_Array, Array:sound_die = Invalid_Array, Array:sound_fall = Invalid_Array, Array:sound_miss_slash = Invalid_Array, Array:sound_miss_wall = Invalid_Array, Array:sound_hit_normal = Invalid_Array, Array:sound_hit_stab = Invalid_Array, Array:sound_idle = Invalid_Array, Array:sound_idle_last = Invalid_Array);
+native zp_nemesis_sound_register(Array:sound_pain = Invalid_Array, Array:sound_die = Invalid_Array, Array:sound_fall = Invalid_Array, Array:sound_miss_slash = Invalid_Array, Array:sound_miss_wall = Invalid_Array, Array:sound_hit_normal = Invalid_Array, Array:sound_hit_stab = Invalid_Array, Array:sound_idle = Invalid_Array, Array:sound_idle_last = Invalid_Array);
 
 
 
