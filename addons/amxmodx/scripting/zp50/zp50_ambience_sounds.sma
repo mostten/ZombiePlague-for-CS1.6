@@ -15,9 +15,16 @@
 
 #define TASK_AMBIENCESOUNDS 100
 #define SOUND_MAX_LENGTH 64
+#define ZP_INVALID_SOUND_ID -1
 
 // Settings file
 new const ZP_SETTINGS_FILE[] = "zombieplague.ini";
+
+enum _:SoundInfo{
+	SoundInfo_Mode = 0,
+	SoundInfo_Index,
+	SoundInfo_Duration
+};
 
 // 声音文件
 new const sounds_default[][] = {
@@ -27,9 +34,8 @@ new const durations_default[] = {
 	17
 }
 
-new Array:g_ambience_modes;
 new Array:g_ambience_sounds;
-new Array:g_ambience_durations;
+new Array:g_ambience_infos;
 
 public plugin_init()
 {
@@ -39,9 +45,7 @@ public plugin_init()
 
 public plugin_precache()
 {
-	g_ambience_sounds = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	g_ambience_modes = ArrayCreate(1, 1);
-	g_ambience_durations = ArrayCreate(1, 1);
+	SoundArraysInitialize();
 	
 	new modename[32], key[64];
 	for (new index = 0; index < zp_gamemodes_get_count(); index++)
@@ -58,16 +62,7 @@ public plugin_precache()
 			{
 				new sound[SOUND_MAX_LENGTH];
 				ArrayGetString(ambience_sounds, sound_index, sound, charsmax(sound));
-				if (equal(sound[strlen(sound)-4], ".mp3"))
-				{
-					new path[128];
-					format(path, charsmax(path), "sound/%s", sound);
-					precache_generic(path);
-				}
-				else
-					precache_sound(sound);
-				ArrayPushString(g_ambience_sounds, sound);
-				ArrayPushCell(g_ambience_modes, index);
+				AddSoundArrays(sound, index, 0);
 			}
 		}
 		else
@@ -75,22 +70,22 @@ public plugin_precache()
 			for (new sound_index = 0; sound_index < sizeof sounds_default; sound_index++)
 			{
 				ArrayPushString(ambience_sounds, sounds_default[sound_index]);
-				ArrayPushString(g_ambience_sounds, sounds_default[sound_index]);
-				ArrayPushCell(g_ambience_modes, index);
+				AddSoundArrays(sounds_default[sound_index], index, 0);
 			}
 			// 存储至外部文件
 			amx_save_setting_string_arr(ZP_SETTINGS_FILE, "Ambience Sounds", key, ambience_sounds);
 		}
+		ArrayDestroy(ambience_sounds);
 		
 		new Array:ambience_durations = ArrayCreate(1, 1);
 		formatex(key, charsmax(key), "DURATIONS (%s)", modename);
 		amx_load_setting_int_arr(ZP_SETTINGS_FILE, "Ambience Sounds", key, ambience_durations);
 		if (ArraySize(ambience_durations) > 0)
 		{
-			for (new sound_index = 0; sound_index < ArraySize(ambience_durations); sound_index++)
+			for (new duration_index = 0; duration_index < ArraySize(ambience_durations); duration_index++)
 			{
-				new duration = ArrayGetCell(ambience_durations, sound_index);
-				ArrayPushCell(g_ambience_durations, duration);
+				new duration = ArrayGetCell(ambience_durations, duration_index);
+				SetSoundDuration(index, duration_index, duration);
 			}
 		}
 		else
@@ -98,21 +93,11 @@ public plugin_precache()
 			for (new duration_index = 0; duration_index < sizeof durations_default; duration_index++)
 			{
 				ArrayPushCell(ambience_durations, durations_default[duration_index]);
-				ArrayPushCell(g_ambience_durations, durations_default[duration_index]);
+				SetSoundDuration(index, duration_index, durations_default[duration_index]);
 			}
 			// 存储至外部文件
 			amx_save_setting_int_arr(ZP_SETTINGS_FILE, "Ambience Sounds", key, ambience_durations);
 		}
-		
-		new sounds_count = ArraySize(ambience_sounds);
-		new durations_count = ArraySize(ambience_durations);
-		if(durations_count < sounds_count)
-		{
-			for(new i = durations_count; i < sounds_count; i++)
-				ArrayPushCell(g_ambience_durations, 0);
-		}
-		
-		ArrayDestroy(ambience_sounds);
 		ArrayDestroy(ambience_durations);
 	}
 }
@@ -166,31 +151,109 @@ PlaySoundToClients(const sound[])
 		client_cmd(0, "spk ^"%s^"", sound);
 }
 
+SoundArraysInitialize()
+{
+	if(g_ambience_sounds == Invalid_Array)
+		g_ambience_sounds = ArrayCreate(SOUND_MAX_LENGTH, 1);
+	if(g_ambience_infos == Invalid_Array)
+		g_ambience_infos = ArrayCreate(SoundInfo, 1);
+}
+
+bool:SetSoundDuration(gamemode, duration_index, duration)
+{
+	if(duration > 0 && g_ambience_infos != Invalid_Array && duration_index >= 0 && duration_index < ArraySize(g_ambience_infos))
+	{
+		new index = 0;
+		for(new i = 0; i < ArraySize(g_ambience_infos); i++)
+		{
+			new info[SoundInfo];
+			ArrayGetArray(g_ambience_infos, i, info);
+			if(info[SoundInfo_Mode] == gamemode)
+			{
+				if(index == duration_index)
+				{
+					info[SoundInfo_Duration] = duration;
+					ArraySetArray(g_ambience_infos, i, info);
+					return true;
+				}
+				index++;
+			}
+		}
+	}
+	return false;
+}
+
+AddSoundArrays(sound[], gamemode, duration)
+{
+	if(strlen(sound))
+	{
+		SoundArraysInitialize();
+		
+		new info[SoundInfo];
+		info[SoundInfo_Mode] = gamemode;
+		info[SoundInfo_Duration] = duration;
+		new index = GetSoundFileIndex(sound);
+		if(index < 0)
+		{
+			if(equal(sound[strlen(sound)-4], ".mp3"))
+			{
+				new path[128];
+				format(path, charsmax(path), "sound/%s", sound);
+				precache_generic(path);
+			}
+			else
+			{
+				precache_sound(sound);
+			}
+			info[SoundInfo_Index] = ArraySize(g_ambience_sounds);
+			ArrayPushString(g_ambience_sounds, sound);
+		}
+		else
+		{
+			info[SoundInfo_Index] = index;
+		}
+		ArrayPushArray(g_ambience_infos, info);
+		return info[SoundInfo_Index];
+	}
+	return ZP_INVALID_SOUND_ID;
+}
+
+GetSoundFileIndex(sound[])
+{
+	if(strlen(sound) && g_ambience_sounds != Invalid_Array)
+	{
+		for(new index = 0; index < ArraySize(g_ambience_sounds); index++)
+		{
+			new temp[SOUND_MAX_LENGTH];
+			ArrayGetString(g_ambience_sounds, index, temp, charsmax(temp));
+			if(equal(sound, temp))
+				return index;
+		}
+	}
+	return ZP_INVALID_SOUND_ID;
+}
+
 GetModeRandomSound(gamemode, sound[])
 {
 	new duration = 0;
-	new Array:random_sounds = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:random_durations = ArrayCreate(1, 1);
-	for(new i = 0; i < ArraySize(g_ambience_modes); i++)
+	if(g_ambience_infos != Invalid_Array && g_ambience_sounds != Invalid_Array)
 	{
-		new mode = ArrayGetCell(g_ambience_modes, i);
-		if(mode == gamemode)
+		new Array:random_infos = ArrayCreate(SoundInfo, 1);
+		for(new i = 0; i < ArraySize(g_ambience_infos); i++)
 		{
-			new sound_temp[SOUND_MAX_LENGTH];
-			new duration_temp = ArrayGetCell(g_ambience_durations, i);
-			ArrayPushCell(random_durations, duration_temp);
-			ArrayGetString(g_ambience_sounds, i, sound_temp, charsmax(sound_temp));
-			ArrayPushString(random_sounds, sound_temp);
+			new info[SoundInfo];
+			ArrayGetArray(g_ambience_infos, i, info);
+			if(info[SoundInfo_Mode] == gamemode)
+				ArrayPushArray(random_infos, info);
 		}
+		if(ArraySize(random_infos))
+		{
+			new info[SoundInfo];
+			ArrayGetArray(random_infos, random_num(0, ArraySize(random_infos) - 1), info);
+			ArrayGetString(g_ambience_sounds, info[SoundInfo_Index], sound, SOUND_MAX_LENGTH);
+			duration = info[SoundInfo_Duration];
+		}
+		ArrayDestroy(random_infos);
 	}
-	if(ArraySize(random_sounds) && ArraySize(random_durations))
-	{
-		new random = random_num(0, ArraySize(random_sounds) - 1);
-		ArrayGetString(random_sounds, random, sound, SOUND_MAX_LENGTH);
-		if(random < ArraySize(random_durations))
-			duration = ArrayGetCell(random_durations, random);
-	}
-	ArrayDestroy(random_sounds);
-	ArrayDestroy(random_durations);
 	return duration;
 }
