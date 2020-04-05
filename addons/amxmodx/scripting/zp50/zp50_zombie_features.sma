@@ -143,17 +143,6 @@ public zp_fw_core_infect_post(id, attacker)
 		if (get_pcvar_num(cvar_zombie_bleeding))
 			set_task(0.7, "zombie_bleeding", id+TASK_BLOOD, _, _, "b")
 	}
-	// Ghost Class loaded?
-	else if (!LibraryExists(LIBRARY_GHOST, LibType_Library) || !zp_class_ghost_get(id))
-	{
-		// Set silent footsteps?
-		if (get_pcvar_num(cvar_zombie_silent))
-			set_user_footsteps(id, 1)
-		
-		// Zombie bleeding?
-		if (get_pcvar_num(cvar_zombie_bleeding))
-			set_task(0.7, "zombie_bleeding", id+TASK_BLOOD, _, _, "b")
-	}
 	else
 	{
 		// Restore normal footsteps?

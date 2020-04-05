@@ -26,6 +26,13 @@
 #include <zp50_class_ghost>
 
 #define ZP_INVALID_TEAM_CLASS -1
+#define ZP_STEP_DELAY 0.5
+#define SOUND_MAX_LENGTH 64
+#define TASK_IDLE_SOUNDS 100
+#define TASK_STEP_SOUNDS 200
+#define ID_IDLE_SOUNDS (taskid - TASK_IDLE_SOUNDS)
+#define ID_STEP_SOUNDS (taskid - TASK_STEP_SOUNDS)
+#define MAXPLAYERS 32	
 
 enum SoundTeam{
 	SoundTeam_Human = 0,
@@ -43,6 +50,8 @@ enum SoundType{
 	SoundType_MissWall,
 	SoundType_HitNormal,
 	SoundType_HitStab,
+	SoundType_HeadShot,
+	SoundType_Step,
 	SoundType_Idle,
 	SoundType_IdleLast
 };
@@ -83,28 +92,27 @@ new const sound_ghost_hit_stab[][] = { "zombie_plague/ghost/claw/zombie_ghost_st
 new const sound_ghost_idle[][] = { "zombie_plague/ghost/ambience/zombie_ghost_idle01.wav" , "zombie_plague/ghost/ambience/zombie_ghost_idle02.wav" }
 new const sound_ghost_idle_last[][] = { "zombie_plague/ghost/ambience/zombie_ghost_idle03.wav" }
 
-#define SOUND_MAX_LENGTH 64
-
 // Custom sounds
 new Array:g_sound_files;
 new Array:g_sound_infos;
 
-#define TASK_IDLE_SOUNDS 100
-#define ID_IDLE_SOUNDS (taskid - TASK_IDLE_SOUNDS)
-
-new cvar_zombie_sounds_pain, cvar_zombie_sounds_attack, cvar_zombie_sounds_idle
+new cvar_zombie_sounds_pain, cvar_zombie_sounds_attack, cvar_zombie_sounds_idle, cvar_zombie_sounds_headshot, cvar_zombie_sounds_step;
 
 public plugin_init()
 {
-	register_plugin("[ZP] Zombie Sounds", ZP_VERSION_STRING, "ZP Dev Team")
+	register_plugin("[ZP] Zombie Sounds", ZP_VERSION_STRING, "ZP Dev Team");
 	
-	register_forward(FM_EmitSound, "fw_EmitSound")
-	RegisterHam(Ham_Killed, "player", "fw_PlayerKilled")
-	RegisterHamBots(Ham_Killed, "fw_PlayerKilled")
+	register_forward(FM_EmitSound, "fw_EmitSound");
+	RegisterHam(Ham_Spawn, "player", "fw_PlayerSpawn", 1);
+	RegisterHamBots(Ham_Spawn, "fw_PlayerSpawn", 1);
+	RegisterHam(Ham_Killed, "player", "fw_PlayerKilled");
+	RegisterHamBots(Ham_Killed, "fw_PlayerKilled");
 	
-	cvar_zombie_sounds_pain = register_cvar("zp_zombie_sounds_pain", "1")
-	cvar_zombie_sounds_attack = register_cvar("zp_zombie_sounds_attack", "1")
-	cvar_zombie_sounds_idle = register_cvar("zp_zombie_sounds_idle", "1")
+	cvar_zombie_sounds_pain = register_cvar("zp_zombie_sounds_pain", "1");
+	cvar_zombie_sounds_attack = register_cvar("zp_zombie_sounds_attack", "1");
+	cvar_zombie_sounds_idle = register_cvar("zp_zombie_sounds_idle", "1");
+	cvar_zombie_sounds_headshot = register_cvar("zp_zombie_sounds_headshot", "1");
+	cvar_zombie_sounds_step = register_cvar("zp_zombie_sounds_step", "1");
 }
 
 public plugin_precache()
@@ -514,8 +522,10 @@ public native_zombie_sound_register(plugin_id, num_params)
 	new Array:sound_hit_stab = Array:get_param(8);
 	new Array:sound_idle = Array:get_param(9);
 	new Array:sound_idle_last = Array:get_param(10);
+	new Array:sound_head_shot = Array:get_param(11);
+	new Array:sound_step = Array:get_param(12);
 	
-	return RegSoundArray(zombie_class, SoundTeam_Zombie, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last);
+	RegSoundArray(zombie_class, SoundTeam_Zombie, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last, sound_head_shot, sound_step);
 }
 
 public native_ghost_sound_register(plugin_id, num_params)
@@ -530,8 +540,10 @@ public native_ghost_sound_register(plugin_id, num_params)
 	new Array:sound_hit_stab = Array:get_param(8);
 	new Array:sound_idle = Array:get_param(9);
 	new Array:sound_idle_last = Array:get_param(10);
+	new Array:sound_head_shot = Array:get_param(11);
+	new Array:sound_step = Array:get_param(12);
 	
-	return RegSoundArray(ghost_class, SoundTeam_Ghost, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last);
+	RegSoundArray(ghost_class, SoundTeam_Ghost, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last, sound_head_shot, sound_step);
 }
 
 public native_human_sound_register(plugin_id, num_params)
@@ -546,8 +558,10 @@ public native_human_sound_register(plugin_id, num_params)
 	new Array:sound_hit_stab = Array:get_param(8);
 	new Array:sound_idle = Invalid_Array;
 	new Array:sound_idle_last = Invalid_Array;
+	new Array:sound_head_shot = Array:get_param(9);
+	new Array:sound_step = Array:get_param(10);
 	
-	return RegSoundArray(human_class, SoundTeam_Human, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last);
+	RegSoundArray(human_class, SoundTeam_Human, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last, sound_head_shot, sound_step);
 }
 
 public native_survivor_sound_register(plugin_id, num_params)
@@ -562,8 +576,10 @@ public native_survivor_sound_register(plugin_id, num_params)
 	new Array:sound_hit_stab = Array:get_param(7);
 	new Array:sound_idle = Invalid_Array;
 	new Array:sound_idle_last = Invalid_Array;
+	new Array:sound_head_shot = Array:get_param(8);
+	new Array:sound_step = Array:get_param(9);
 	
-	return RegSoundArray(survivor_class, SoundTeam_Survivor, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last);
+	RegSoundArray(survivor_class, SoundTeam_Survivor, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last, sound_head_shot, sound_step);
 }
 
 public native_nemesis_sound_register(plugin_id, num_params)
@@ -578,11 +594,13 @@ public native_nemesis_sound_register(plugin_id, num_params)
 	new Array:sound_hit_stab = Array:get_param(7);
 	new Array:sound_idle = Array:get_param(8);
 	new Array:sound_idle_last = Array:get_param(9);
+	new Array:sound_head_shot = Array:get_param(10);
+	new Array:sound_step = Array:get_param(11);
 	
-	return RegSoundArray(nemesis_class, SoundTeam_Nemesis, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last);
+	RegSoundArray(nemesis_class, SoundTeam_Nemesis, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last, sound_head_shot, sound_step);
 }
 
-RegSoundArray(team_class, SoundTeam:sound_team, &Array:sound_pain = Invalid_Array, &Array:sound_die = Invalid_Array, &Array:sound_fall = Invalid_Array, &Array:sound_miss_slash = Invalid_Array, &Array:sound_miss_wall = Invalid_Array, &Array:sound_hit_normal = Invalid_Array, &Array:sound_hit_stab = Invalid_Array, &Array:sound_idle = Invalid_Array, &Array:sound_idle_last = Invalid_Array)
+RegSoundArray(team_class, SoundTeam:sound_team, &Array:sound_pain = Invalid_Array, &Array:sound_die = Invalid_Array, &Array:sound_fall = Invalid_Array, &Array:sound_miss_slash = Invalid_Array, &Array:sound_miss_wall = Invalid_Array, &Array:sound_hit_normal = Invalid_Array, &Array:sound_hit_stab = Invalid_Array, &Array:sound_idle = Invalid_Array, &Array:sound_idle_last = Invalid_Array, &Array:sound_head_shot = Invalid_Array, &Array:sound_step = Invalid_Array)
 {
 	new index;
 	new sound[SOUND_MAX_LENGTH];
@@ -658,7 +676,22 @@ RegSoundArray(team_class, SoundTeam:sound_team, &Array:sound_pain = Invalid_Arra
 			AddSoundFileArray(sound, sound_team, SoundType_IdleLast, team_class);
 		}
 	}
-	return index;
+	if(sound_head_shot != Invalid_Array)
+	{
+		for (index = 0; index < ArraySize(sound_head_shot); index++)
+		{
+			ArrayGetString(sound_head_shot, index, sound, charsmax(sound));
+			AddSoundFileArray(sound, sound_team, SoundType_HeadShot, team_class);
+		}
+	}
+	if(sound_step != Invalid_Array)
+	{
+		for (index = 0; index < ArraySize(sound_step); index++)
+		{
+			ArrayGetString(sound_step, index, sound, charsmax(sound));
+			AddSoundFileArray(sound, sound_team, SoundType_Step, team_class);
+		}
+	}
 }
 
 AddSoundFileArray(sound[], SoundTeam:sound_team, SoundType:sound_type, team_class = ZP_INVALID_TEAM_CLASS)
@@ -678,7 +711,16 @@ AddSoundFileArray(sound[], SoundTeam:sound_team, SoundType:sound_type, team_clas
 		}
 		else
 		{
-			precache_sound(sound);
+			if(equal(sound[strlen(sound)-4], ".mp3"))
+			{
+				new path[128];
+				format(path, charsmax(path), "sound/%s", sound);
+				precache_generic(path);
+			}
+			else
+			{
+				precache_sound(sound);
+			}
 			info[SoundInfo_FileIndex] = ArraySize(g_sound_files);
 			ArrayPushString(g_sound_files, sound);
 		}
@@ -770,6 +812,7 @@ GetCustomSoundArray(team_class, SoundTeam:sound_team, SoundType:sound_type, &Arr
 			new sound[SOUND_MAX_LENGTH];
 			ArrayGetString(g_sound_files, info[SoundInfo_FileIndex], sound, charsmax(sound));
 			ArrayPushString(sound_array, sound);
+			
 			count++;
 		}
 	}
@@ -802,12 +845,11 @@ public fw_EmitSound(id, channel, const sample[], Float:volume, Float:attn, flags
 	// Replace these next sounds for zombies only
 	if (!is_user_connected(id))
 		return FMRES_IGNORED;
-	
 	static sound[SOUND_MAX_LENGTH];
 	if (get_pcvar_num(cvar_zombie_sounds_pain))
 	{
 		// Zombie being hit
-		if (sample[7] == 'b' && sample[8] == 'h' && sample[9] == 'i' && sample[10] == 't')
+		if (StrContains(sample, "/bhit_") > -1)
 		{
 			if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_Pain, sound))
 			{
@@ -818,7 +860,7 @@ public fw_EmitSound(id, channel, const sample[], Float:volume, Float:attn, flags
 		}
 		
 		// Zombie dies
-		if (sample[7] == 'd' && ((sample[8] == 'i' && sample[9] == 'e') || (sample[8] == 'e' && sample[9] == 'a')))
+		else if (StrContains(sample, "/die") > -1 || StrContains(sample, "/death") > -1)
 		{
 			if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_Die, sound))
 			{
@@ -829,7 +871,7 @@ public fw_EmitSound(id, channel, const sample[], Float:volume, Float:attn, flags
 		}
 		
 		// Zombie falls off
-		if (sample[10] == 'f' && sample[11] == 'a' && sample[12] == 'l' && sample[13] == 'l')
+		else if (StrContains(sample, "/pl_fall") > -1)
 		{
 			if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_Fall, sound))
 			{
@@ -843,57 +885,71 @@ public fw_EmitSound(id, channel, const sample[], Float:volume, Float:attn, flags
 	if (get_pcvar_num(cvar_zombie_sounds_attack))
 	{
 		// Zombie attacks with knife
-		if (sample[8] == 'k' && sample[9] == 'n' && sample[10] == 'i')
+		if (StrContains(sample, "/knife_slash") > -1) // slash
 		{
-			if (sample[14] == 's' && sample[15] == 'l' && sample[16] == 'a') // slash
+			if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_MissSlash, sound))
 			{
-				if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_MissSlash, sound))
-				{
-					emit_sound(id, channel, sound, volume, attn, flags, pitch);
-					return FMRES_SUPERCEDE;
-				}
+				emit_sound(id, channel, sound, volume, attn, flags, pitch);
+				return FMRES_SUPERCEDE;
 			}
-			else if (sample[14] == 'h' && sample[15] == 'i' && sample[16] == 't') // hit
+			return FMRES_IGNORED;
+		}
+		else if (StrContains(sample, "/knife_hitwall") > -1) // wall
+		{
+			if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_MissWall, sound))
 			{
-				if (sample[17] == 'w') // wall
-				{
-					if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_MissWall, sound))
-					{
-						emit_sound(id, channel, sound, volume, attn, flags, pitch);
-						return FMRES_SUPERCEDE;
-					}
-				}
-				else if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_HitNormal, sound))
-				{
-					emit_sound(id, channel, sound, volume, attn, flags, pitch);
-					return FMRES_SUPERCEDE;
-				}
+				emit_sound(id, channel, sound, volume, attn, flags, pitch);
+				return FMRES_SUPERCEDE;
 			}
-			else if (sample[14] == 's' && sample[15] == 't' && sample[16] == 'a') // stab
+			return FMRES_IGNORED;
+		}
+		else if (StrContains(sample, "/knife_hit") > -1) // hit
+		{
+			if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_HitNormal, sound))
 			{
-				if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_HitStab, sound))
-				{
-					emit_sound(id, channel, sound, volume, attn, flags, pitch);
-					return FMRES_SUPERCEDE;
-				}
+				emit_sound(id, channel, sound, volume, attn, flags, pitch);
+				return FMRES_SUPERCEDE;
 			}
+			return FMRES_IGNORED;
+		}
+		else if (StrContains(sample, "/knife_stab") > -1) // stab
+		{
+			if(GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_HitStab, sound))
+			{
+				emit_sound(id, channel, sound, volume, attn, flags, pitch);
+				return FMRES_SUPERCEDE;
+			}
+			return FMRES_IGNORED;
 		}
 	}
 	
 	return FMRES_IGNORED;
 }
 
+// Ham Player Spawned Forward
+public fw_PlayerSpawn(id) 
+{
+	if (get_pcvar_num(cvar_zombie_sounds_step))
+		set_task(ZP_STEP_DELAY, "zombie_step_sounds", id+TASK_STEP_SOUNDS, _, _, "b");
+}
+
 // Ham Player Killed Forward
 public fw_PlayerKilled(victim, attacker, shouldgib)
 {
 	// Remove idle sounds task
-	remove_task(victim+TASK_IDLE_SOUNDS)
+	remove_task(victim+TASK_IDLE_SOUNDS);
+	
+	// Remove step sounds task
+	remove_task(victim+TASK_STEP_SOUNDS);
 }
 
 public client_disconnect(id)
 {
 	// Remove idle sounds task
-	remove_task(id+TASK_IDLE_SOUNDS)
+	remove_task(id+TASK_IDLE_SOUNDS);
+	
+	// Remove step sounds task
+	remove_task(id+TASK_STEP_SOUNDS);
 }
 
 public zp_fw_core_infect_post(id, attacker)
@@ -931,7 +987,7 @@ public zp_fw_core_cure_post(id, attacker)
 // Play idle zombie sounds
 public zombie_idle_sounds(taskid)
 {
-	static sound[SOUND_MAX_LENGTH]
+	static sound[SOUND_MAX_LENGTH];
 	
 	// Last zombie?
 	if (zp_core_is_last_zombie(ID_IDLE_SOUNDS))
@@ -944,4 +1000,95 @@ public zombie_idle_sounds(taskid)
 		if(GetCustomRandomSound(GetClientSoundTeamClass(ID_IDLE_SOUNDS), GetClientSoundTeam(ID_IDLE_SOUNDS), SoundType_Idle, sound))
 			emit_sound(ID_IDLE_SOUNDS, CHAN_VOICE, sound, 1.0, ATTN_NORM, 0, PITCH_NORM);
 	}
+}
+
+// Play step sounds
+public zombie_step_sounds(taskid)
+{
+	if (is_user_alive(ID_STEP_SOUNDS))
+	{
+		static sound[SOUND_MAX_LENGTH];
+		if (GetClientSpeed(ID_STEP_SOUNDS) && (pev(ID_STEP_SOUNDS, pev_flags) & FL_ONGROUND) && GetCustomRandomSound(GetClientSoundTeamClass(ID_STEP_SOUNDS), GetClientSoundTeam(ID_STEP_SOUNDS), SoundType_Step, sound))
+		{
+			// Disable original step
+			set_pev(ID_STEP_SOUNDS, pev_flTimeStepSound, 999);
+			
+			// Step sound
+			emit_sound(ID_STEP_SOUNDS, CHAN_BODY, sound, VOL_NORM, ATTN_STATIC, 0, PITCH_NORM);
+		}
+	}
+}
+
+public client_death(killer, victim, wpnindex, hitplace, TK)
+{
+	static sound[SOUND_MAX_LENGTH];
+	new bool:headshot = (hitplace == HIT_HEAD);
+	new bool:selfkill = (killer == victim);
+	if(cvar_zombie_sounds_headshot && headshot && !selfkill && GetCustomRandomSound(GetClientSoundTeamClass(killer), GetClientSoundTeam(killer), SoundType_HeadShot, sound))
+	{
+		PlaySoundToClient(killer, sound);
+	}
+}
+
+/**
+ * Tests whether a string is found inside another string.
+ *
+ * @param str			String to search in.
+ * @param substr		Substring to find inside the original string.
+ * @param caseSensitive	If true (default), search is case sensitive.
+ *						If false, search is case insensitive.
+ * @return				-1 on failure (no match found). Any other value
+ *						indicates a position in the string where the match starts.
+ */
+StrContains(const str[], const substr[], bool:caseSensitive = true)
+{
+	new strSize = strlen(str) + 1;
+	new substrSize = strlen(substr) + 1;
+	if(strSize < 1 || substrSize < 1 || substrSize > strSize)
+		return -1;
+	
+	for(new i = 0; i < strSize; i++)
+	{
+		if((caseSensitive && str[i] != substr[0]) || (!caseSensitive && tolower(str[i]) != tolower(substr[0])))
+			continue;
+		new count = 1;
+		for(new subi = 1; subi < substrSize; subi++)
+		{
+			new temp = i + subi;
+			if((temp < strSize) && ((caseSensitive && substr[subi] == str[temp]) || (!caseSensitive && tolower(substr[subi]) == tolower(str[temp]))))
+			{
+				count++;
+			}
+			else
+			{
+				break;
+			}
+			if(count == strlen(substr))
+				return i;
+		}
+	}
+	return -1;
+}
+
+// Plays a sound on client
+PlaySoundToClient(client, const sound[])
+{
+	if (equal(sound[strlen(sound)-4], ".mp3"))
+		client_cmd(client, "mp3 play ^"sound/%s^"", sound);
+	else
+		client_cmd(client, "spk ^"%s^"", sound);
+}
+
+//Get client speed
+Float:GetClientSpeed(id)
+{
+    if(!pev_valid(id))
+        return 0.0;
+    
+    static Float:vVelocity[3];
+    pev(id, pev_velocity, vVelocity);
+    
+    vVelocity[2] = 0.0;
+    
+    return vector_length(vVelocity);
 }
