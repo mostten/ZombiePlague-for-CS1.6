@@ -26,13 +26,13 @@
 #include <zp50_class_ghost>
 
 #define ZP_INVALID_TEAM_CLASS -1
-#define ZP_STEP_DELAY 0.5
+#define ZP_STEP_DELAY 0.7
 #define SOUND_MAX_LENGTH 64
 #define TASK_IDLE_SOUNDS 100
 #define TASK_STEP_SOUNDS 200
 #define ID_IDLE_SOUNDS (taskid - TASK_IDLE_SOUNDS)
 #define ID_STEP_SOUNDS (taskid - TASK_STEP_SOUNDS)
-#define MAXPLAYERS 32	
+#define MAXPLAYERS 32
 
 enum SoundTeam{
 	SoundTeam_Human = 0,
@@ -95,6 +95,8 @@ new const sound_ghost_idle_last[][] = { "zombie_plague/ghost/ambience/zombie_gho
 // Custom sounds
 new Array:g_sound_files;
 new Array:g_sound_infos;
+
+new Float:g_client_origin[MAXPLAYERS+1][3];
 
 new cvar_zombie_sounds_pain, cvar_zombie_sounds_attack, cvar_zombie_sounds_idle, cvar_zombie_sounds_headshot, cvar_zombie_sounds_step;
 
@@ -1008,7 +1010,7 @@ public zombie_step_sounds(taskid)
 	if (is_user_alive(ID_STEP_SOUNDS))
 	{
 		static sound[SOUND_MAX_LENGTH];
-		if (GetClientSpeed(ID_STEP_SOUNDS) && (pev(ID_STEP_SOUNDS, pev_flags) & FL_ONGROUND) && GetCustomRandomSound(GetClientSoundTeamClass(ID_STEP_SOUNDS), GetClientSoundTeam(ID_STEP_SOUNDS), SoundType_Step, sound))
+		if (IsClientOriginChanged(ID_STEP_SOUNDS) && (pev(ID_STEP_SOUNDS, pev_flags) & FL_ONGROUND) && GetCustomRandomSound(GetClientSoundTeamClass(ID_STEP_SOUNDS), GetClientSoundTeam(ID_STEP_SOUNDS), SoundType_Step, sound))
 		{
 			// Disable original step
 			set_pev(ID_STEP_SOUNDS, pev_flTimeStepSound, 999);
@@ -1080,15 +1082,16 @@ PlaySoundToClient(client, const sound[])
 }
 
 //Get client speed
-Float:GetClientSpeed(id)
+bool:IsClientOriginChanged(client)
 {
-    if(!pev_valid(id))
-        return 0.0;
-    
-    static Float:vVelocity[3];
-    pev(id, pev_velocity, vVelocity);
-    
-    vVelocity[2] = 0.0;
-    
-    return vector_length(vVelocity);
+	new Float:origin[3];
+	pev(client, pev_origin, origin);
+	if(origin[0] != g_client_origin[client][0] || origin[1] != g_client_origin[client][1] || origin[2] != g_client_origin[client][2])
+	{
+		g_client_origin[client][0] = origin[0];
+		g_client_origin[client][1] = origin[1];
+		g_client_origin[client][2] = origin[2];
+		return true;
+	}
+	return false;
 }

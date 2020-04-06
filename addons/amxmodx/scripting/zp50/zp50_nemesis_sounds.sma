@@ -13,6 +13,7 @@ new const sound_nemesis_hit_normal[][] = { "weapons/knife_hit1.wav" , "weapons/k
 new const sound_nemesis_hit_stab[][] = { "weapons/knife_stab.wav" }
 new const sound_nemesis_idle[][] = { "nihilanth/nil_now_die.wav" , "nihilanth/nil_slaves.wav" , "nihilanth/nil_alone.wav" , "zombie_plague/zombie_brains1.wav" , "zombie_plague/zombie_brains2.wav" }
 new const sound_nemesis_idle_last[][] = { "nihilanth/nil_thelast.wav" }
+new const sound_nemesis_step[][] = { "player/pl_step1.wav" , "player/pl_step2.wav" , "player/pl_step3.wav" , "player/pl_step4.wav" }
 
 public plugin_precache()
 {
@@ -27,6 +28,7 @@ public plugin_precache()
 	new Array:nemesis_hit_stab = ArrayCreate(SOUND_MAX_LENGTH, 1);
 	new Array:nemesis_idle = ArrayCreate(SOUND_MAX_LENGTH, 1);
 	new Array:nemesis_idle_last = ArrayCreate(SOUND_MAX_LENGTH, 1);
+	new Array:nemesis_step = ArrayCreate(SOUND_MAX_LENGTH, 1);
 	
 	new index;
 	for (index = 0; index < sizeof sound_nemesis_pain; index++)
@@ -47,8 +49,10 @@ public plugin_precache()
 		ArrayPushString(nemesis_idle, sound_nemesis_idle[index])
 	for (index = 0; index < sizeof sound_nemesis_idle_last; index++)
 		ArrayPushString(nemesis_idle_last, sound_nemesis_idle_last[index])
+	for (index = 0; index < sizeof sound_nemesis_step; index++)
+		ArrayPushString(nemesis_step, sound_nemesis_step[index])
 	
-	zp_nemesis_sound_register(nemesis_pain, nemesis_die, nemesis_fall, nemesis_miss_slash, nemesis_miss_wall, nemesis_hit_normal, nemesis_hit_stab, nemesis_idle, nemesis_idle_last, Invalid_Array, Invalid_Array);
+	zp_nemesis_sound_register(nemesis_pain, nemesis_die, nemesis_fall, nemesis_miss_slash, nemesis_miss_wall, nemesis_hit_normal, nemesis_hit_stab, nemesis_idle, nemesis_idle_last, Invalid_Array, nemesis_step);
 	
 	ArrayDestroy(nemesis_pain);
 	ArrayDestroy(nemesis_die);
@@ -59,4 +63,5 @@ public plugin_precache()
 	ArrayDestroy(nemesis_hit_stab);
 	ArrayDestroy(nemesis_idle);
 	ArrayDestroy(nemesis_idle_last);
+	ArrayDestroy(nemesis_step);
 }
