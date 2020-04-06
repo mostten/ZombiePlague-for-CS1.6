@@ -35,19 +35,15 @@ new const g_ambience_ents[][] = { "env_fog", "env_rain", "env_snow" };
 #define TASK_AMBIENCE_LIGHT 100
 #define ID_AMBIENCE_LIGHT (taskid - TASK_AMBIENCE_LIGHT)
 #define CLASS_WEATHER_EFFECTS "weather_effects"
+#define CLASS_HUD_ENTITY "hud_entity"
 #define ZOMBIE_THUNDER_1 "ambience/thunder_clap.wav"
 #define ZOMBIE_THUNDER_2 "de_torn/torn_thndrstrike.wav"
 
-new g_flash_count;
-new bool:g_is_flashing;
-new g_light_beam;
-new g_light_style[3][] = { "b", "c", "n" };
-new g_light_points[MAX_LIGHT_POINTS];
-
 enum _:Ambience_Effects{
-	Ambience_Rain = 0,
+	Ambience_Sunny = 0,
+	Ambience_Rain,
 	Ambience_Snow,
-	Ambience_Thunder
+	Ambience_RainAndSnow
 };
 
 enum _:Flash_Level{
@@ -56,9 +52,24 @@ enum _:Flash_Level{
 	Flash_Max
 };
 
+new g_hud;
+new g_weather = Ambience_Sunny;
+new g_msg_recieve;
+new g_flash_count;
+new bool:g_is_flashing;
+new bool:g_is_hud_removed;
+new g_light_beam;
+new g_light_style[3][] = { "b", "c", "n" };
+new g_light_points[MAX_LIGHT_POINTS];
+
 public plugin_init()
 {
 	register_plugin("[ZP] Ambience Effects", ZP_VERSION_STRING, "ZP Dev Team rewrite by Mostten");
+	g_msg_recieve = get_user_msgid("ReceiveW");
+	register_message(g_msg_recieve, "MsgReceived");
+	register_logevent("Event_RoundEnd", 2, "1&Restart_Round");
+	register_logevent("Event_RoundEnd", 2, "1=Game_Commencing");
+	register_logevent("Event_RoundEnd", 2, "1=Round_End");
 	unregister_forward(FM_Spawn, g_fwSpawn);
 }
 
@@ -90,38 +101,23 @@ public plugin_precache()
 			fm_set_kvd(ent, "rendercolor", g_ambience_fog_color, "env_fog")
 		}
 	}
-	if (g_ambience_random)
-	{
-		switch(random_num(0, Ambience_Effects - 1))
-		{
-			case Ambience_Rain:
-			{
-				if (g_ambience_rain)
-					engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_rain"));
-				else if (g_ambience_snow)
-					engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_snow"));	
-			}
-			case Ambience_Snow:
-			{
-				if (g_ambience_snow)
-					engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_snow"));
-				else if (g_ambience_rain)
-					engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_rain"));
-			}
-		}
-	}
-	else
-	{
-		if (g_ambience_rain)
-			engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_rain"))
-		if (g_ambience_snow)
-			engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_snow"))
-	}
 	g_fwSpawn = register_forward(FM_Spawn, "fw_Spawn")
 	
+	ambience_create();
 	precache_flash();
-	if(g_ambience_thunder > 0)
-		ambient_generic_create();
+}
+
+ambience_create()
+{
+	engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_snow"));
+	engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_rain"));
+	ambient_generic_create();
+	register_forward(FM_Think, "Fwd_Think", 1);
+}
+
+get_ambience_random()
+{
+	return random_num(Ambience_Sunny, Ambience_Effects - 1);
 }
 
 precache_flash()
@@ -129,6 +125,87 @@ precache_flash()
 	precache_sound(ZOMBIE_THUNDER_1);
 	precache_sound(ZOMBIE_THUNDER_2);
 	g_light_beam = precache_model("sprites/laserbeam.spr");
+}
+
+hud_entity_remove(){
+	if (pev_valid(g_hud))
+	{
+		new classname[32];
+		pev(g_hud, pev_classname, classname, charsmax(classname));
+		if (equal(classname, CLASS_HUD_ENTITY))
+			engfunc(EngFunc_RemoveEntity, g_hud);
+		g_is_hud_removed = true;
+	}
+}
+
+hud_entity_create()
+{
+	new info_target = engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "info_target"));
+	if(info_target)
+	{
+		dllfunc(DLLFunc_Think, info_target);
+		set_pev(g_hud, pev_classname, CLASS_HUD_ENTITY);
+		dllfunc(DLLFunc_Spawn, info_target);
+		set_pev(info_target, pev_nextthink, get_gametime() + 0.1);
+	}
+	return info_target;
+}
+
+get_ambience_config()
+{
+	if (g_ambience_random > 0)
+	{
+		return get_ambience_random();
+	}
+	else
+	{
+		if(g_ambience_rain > 0 && g_ambience_snow > 0)
+		{
+			return Ambience_RainAndSnow;
+		}
+		else if (g_ambience_rain > 0)
+		{
+			return  Ambience_Rain;
+		}
+		else if (g_ambience_snow > 0)
+		{
+			return Ambience_Snow;
+		}
+	}
+	return Ambience_Sunny;
+}
+
+public Event_RoundEnd()
+{
+	switch(get_ambience_config())
+	{
+		case Ambience_Rain:
+		{
+			hud_entity_remove();
+			g_weather = Ambience_Rain;
+		}
+		case Ambience_Snow:
+		{
+			hud_entity_remove();
+			g_weather = Ambience_Snow;
+		}
+		case Ambience_RainAndSnow:
+		{
+			g_weather = Ambience_Snow;
+			if(g_is_hud_removed)
+			{
+				g_hud = hud_entity_create();
+				g_is_hud_removed = false;
+			}
+		}
+		default:{g_weather = Ambience_Sunny;}
+	}
+}
+
+public MsgReceived(msg_id, msg_dest, msg_entity)
+{
+	if(get_ambience_config() != Ambience_RainAndSnow)
+		set_msg_arg_int(1, ARG_BYTE, g_weather);
 }
 
 // Entity Spawn Forward
@@ -166,29 +243,68 @@ public Fwd_Think(entity)
 	
 	if (equal(classname, CLASS_WEATHER_EFFECTS))
 	{
-		if (!g_is_flashing)
-		{
-			switch(random_num(0, 1))
-			{
-				case 0:{set_pev(entity, pev_message, ZOMBIE_THUNDER_1);}
-				case 1:{set_pev(entity, pev_message, ZOMBIE_THUNDER_2);}
-			}
-			dllfunc(DLLFunc_Use, entity, 0);
-			
-			static target;
-			target = get_random_player();
-			if (target)
-				CreateLightningPoints(target);
-			g_is_flashing = true;
-		}
-		
-		if (Ambience_LightsEffect())
-			set_pev(entity, pev_nextthink, get_gametime() + random_float(2.5, 12.5));
-		else
-			set_pev(entity, pev_nextthink, get_gametime() + 0.1);
+		Fwd_Thunder_Think(entity);
+	}
+	else if(equal(classname, CLASS_HUD_ENTITY))
+	{
+		Fwd_Weather_Think(entity);
 	}
 	
 	return FMRES_HANDLED;
+}
+
+bool:is_thunder_enable()
+{
+	return (g_ambience_thunder > 0 && g_weather == Ambience_Rain)
+}
+
+Fwd_Thunder_Think(entity)
+{
+	if (!g_is_flashing)
+	{
+		switch(random_num(0, 1))
+		{
+			case 0:{set_pev(entity, pev_message, ZOMBIE_THUNDER_1);}
+			case 1:{set_pev(entity, pev_message, ZOMBIE_THUNDER_2);}
+		}
+		if(is_thunder_enable())
+			dllfunc(DLLFunc_Use, entity, 0);
+		
+		static target;
+		target = get_random_player();
+		if (target && is_thunder_enable())
+			CreateLightningPoints(target);
+		g_is_flashing = true;
+	}
+	
+	if (Ambience_LightsEffect())
+		set_pev(entity, pev_nextthink, get_gametime() + random_float(2.5, 12.5));
+	else
+		set_pev(entity, pev_nextthink, get_gametime() + 0.1);
+}
+
+Fwd_Weather_Think(entity)
+{
+	if (entity != g_hud)
+		return;
+	
+	switch(g_weather)
+	{
+		case Ambience_Sunny:{g_weather = Ambience_Rain;}
+		case Ambience_Rain:{g_weather = Ambience_Snow;}
+		case Ambience_Snow:{g_weather = Ambience_Rain;}
+		default:{g_weather = Ambience_Rain;}
+	}
+	for(new client = 1; client <= MAXPLAYERS; client++) 
+	{
+		if(is_user_connected(client))
+		{
+			message_begin(MSG_ONE_UNRELIABLE, g_msg_recieve, {0,0,0}, client);
+			write_byte(g_weather);
+			message_end();
+		}
+	}
+	set_pev(g_hud, pev_nextthink, get_gametime() + 0.1);
 }
 
 // Set an entity's key value (from fakemeta_util)
@@ -227,8 +343,6 @@ ambient_generic_create()
 		
 		dllfunc(DLLFunc_Spawn, ambient_generic);
 		set_pev(ambient_generic, pev_nextthink, get_gametime() + 2.0);
-		
-		register_forward(FM_Think, "Fwd_Think", 1);
 	}
 	return -1;
 }
@@ -248,7 +362,8 @@ Ambience_LightsEffect()
 				case 3: { style = 1; }
 				case 4: { style = 0; }
 			}
-			engfunc(EngFunc_LightStyle, 0, g_light_style[style]);
+			if(is_thunder_enable())
+				engfunc(EngFunc_LightStyle, 0, g_light_style[style]);
 			
 			if (g_flash_count >= 4)
 			{
@@ -272,7 +387,8 @@ Ambience_LightsEffect()
 				case 5: { style = 1; }
 				case 6: { style = 0; }
 			}
-			engfunc(EngFunc_LightStyle, 0, g_light_style[style]);
+			if(is_thunder_enable())
+				engfunc(EngFunc_LightStyle, 0, g_light_style[style]);
 			
 			if (g_flash_count >= 6)
 			{
@@ -298,7 +414,8 @@ Ambience_LightsEffect()
 				case 7: { style = 1; }
 				case 8: { style = 0; }
 			}
-			engfunc(EngFunc_LightStyle, 0, g_light_style[style]);
+			if(is_thunder_enable())
+				engfunc(EngFunc_LightStyle, 0, g_light_style[style]);
 			
 			if (g_flash_count >= 8)
 			{
@@ -385,9 +502,9 @@ public Ambience_Lightning(taskid)
 
 get_random_player()
 {
-	new random_client = 0;
+	new random_client = 1;
 	new Array:players = ArrayCreate(1, 1);
-	for(new client = 0; client < MAXPLAYERS; client++)
+	for(new client = 1; client <= MAXPLAYERS; client++)
 	{
 		if (is_user_connected(client) && is_user_alive(client) && is_user_outside(client))
 			ArrayPushCell(players, client);
