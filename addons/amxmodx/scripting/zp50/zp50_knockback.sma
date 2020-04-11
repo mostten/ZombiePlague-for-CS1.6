@@ -21,6 +21,10 @@
 #define LIBRARY_GHOST "zp50_class_ghost"
 #include <zp50_class_ghost>
 
+#define TASK_FROZEN 100
+#define ID_FROZEN (taskid - TASK_FROZEN)
+#define MAXPLAYERS 32
+
 // Settings file
 new const ZP_SETTINGS_FILE[] = "zombieplague.ini"
 
@@ -68,9 +72,12 @@ new const WEAPONENTNAMES_UP[][] = { "", "WEAPON_P228", "", "WEAPON_SCOUT", "WEAP
 			"WEAPON_M3", "WEAPON_M4A1", "WEAPON_TMP", "WEAPON_G3SG1", "WEAPON_FLASHBANG", "WEAPON_DEAGLE", "WEAPON_SG552",
 			"WEAPON_AK47", "WEAPON_KNIFE", "WEAPON_P90" }
 
-new cvar_knockback_damage, cvar_knockback_power, cvar_knockback_obey_class
+new cvar_noengine_knockback_zombie, cvar_noengine_knockback_ghost, cvar_noengine_knockback_nemesis
+new cvar_knockback_power, cvar_knockback_damage, cvar_knockback_obey_class
 new cvar_knockback_zvel, cvar_knockback_ducking, cvar_knockback_distance
-new cvar_knockback_nemesis, cvar_knockback_ghost
+new cvar_knockback_nemesis
+
+new Float:user_knockback[MAXPLAYERS+1][3] // velocity from your knockback position
 
 public plugin_init()
 {
@@ -78,21 +85,24 @@ public plugin_init()
 	
 	RegisterHam(Ham_TraceAttack, "player", "fw_TraceAttack_Post", 1)
 	RegisterHamBots(Ham_TraceAttack, "fw_TraceAttack_Post", 1)
+	RegisterHam(Ham_TakeDamage, "player", "fw_TakeDamage_Pre")
+	RegisterHamBots(Ham_TakeDamage, "fw_TakeDamage_Pre")
+	RegisterHam(Ham_TakeDamage, "player", "fw_TakeDamage_Post", 1)
+	RegisterHamBots(Ham_TakeDamage, "fw_TakeDamage_Post", 1)
 	
+	cvar_noengine_knockback_zombie = register_cvar("zp_no_engine_knockback_zombie", "1")
 	cvar_knockback_damage = register_cvar("zp_knockback_damage", "1")
 	cvar_knockback_power = register_cvar("zp_knockback_power", "1")
 	cvar_knockback_obey_class = register_cvar("zp_knockback_obey_class", "1")
 	cvar_knockback_zvel = register_cvar("zp_knockback_zvel", "0")
 	cvar_knockback_ducking = register_cvar("zp_knockback_ducking", "0.25")
 	cvar_knockback_distance = register_cvar("zp_knockback_distance", "500")
+	cvar_noengine_knockback_nemesis = register_cvar("zp_no_engine_knockback_nemesis", "1")
+	cvar_noengine_knockback_ghost = register_cvar("zp_no_engine_knockback_ghost", "1")
 	
 	// Nemesis Class loaded?
 	if (LibraryExists(LIBRARY_NEMESIS, LibType_Library))
 		cvar_knockback_nemesis = register_cvar("zp_knockback_nemesis", "0.25")
-	
-	// Ghost Class loaded?
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library))
-		cvar_knockback_ghost = register_cvar("zp_knockback_ghost", "0.25")
 }
 
 public plugin_precache()
@@ -151,10 +161,6 @@ public fw_TraceAttack_Post(victim, attacker, Float:damage, Float:direction[3], t
 	if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(victim) && get_pcvar_float(cvar_knockback_nemesis) == 0.0)
 		return;
 	
-	// Ghost knockback disabled, nothing else to do here
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(victim) && get_pcvar_float(cvar_knockback_ghost) == 0.0)
-		return;
-	
 	// Get whether the victim is in a crouch state
 	new ducking = pev(victim, pev_flags) & (FL_DUCKING | FL_ONGROUND) == (FL_DUCKING | FL_ONGROUND)
 	
@@ -169,7 +175,7 @@ public fw_TraceAttack_Post(victim, attacker, Float:damage, Float:direction[3], t
 	
 	// Max distance exceeded
 	if (get_distance(origin1, origin2) > get_pcvar_num(cvar_knockback_distance))
-		return ;
+		return;
 	
 	// Get victim's velocity
 	static Float:velocity[3]
@@ -196,11 +202,11 @@ public fw_TraceAttack_Post(victim, attacker, Float:damage, Float:direction[3], t
 		// Apply nemesis knockback multiplier
 		xs_vec_mul_scalar(direction, get_pcvar_float(cvar_knockback_nemesis), direction)
 	}
-	// Nemesis Class loaded?
+	// Ghost Class loaded?
 	else if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(victim))
 	{
-		// Apply ghost knockback multiplier
-		xs_vec_mul_scalar(direction, get_pcvar_float(cvar_knockback_ghost), direction)
+		// Apply ghost class knockback multiplier
+		xs_vec_mul_scalar(direction, zp_class_ghost_get_kb(zp_class_ghost_get_current(victim)), direction)
 	}
 	else if (get_pcvar_num(cvar_knockback_obey_class))
 	{
@@ -217,4 +223,40 @@ public fw_TraceAttack_Post(victim, attacker, Float:damage, Float:direction[3], t
 	
 	// Set the knockback'd victim's velocity
 	set_pev(victim, pev_velocity, direction)
+}
+
+// Ham Take Damage Forward
+public fw_TakeDamage_Pre(victim, inflictor, attacker, Float:damage, damage_type)
+{
+	if(is_user_no_engine_knockback(victim))
+	{
+		// Engine Knockback disabled
+		pev(victim, pev_velocity, user_knockback[victim]);
+	}
+	return HAM_IGNORED;
+}
+
+public fw_TakeDamage_Post(victim, inflictor, attacker, Float:damage, damage_type)
+{
+	if(is_user_no_engine_knockback(victim))
+	{
+		// Engine Knockback disabled
+		static Float:push[3];
+		pev(victim, pev_velocity, push);
+		xs_vec_sub(push, user_knockback[victim], push);
+		xs_vec_mul_scalar(push, 0.0, push);
+		xs_vec_add(push, user_knockback[victim], push);
+		set_pev(victim, pev_velocity, push);
+	}
+}
+
+bool:is_user_no_engine_knockback(client)
+{
+	if(LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(client))
+		return get_pcvar_num(cvar_noengine_knockback_nemesis) > 0;
+	else if(LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(client))
+		return get_pcvar_num(cvar_noengine_knockback_ghost) > 0;
+	else if(zp_core_is_zombie(client))
+		return get_pcvar_num(cvar_noengine_knockback_zombie) > 0;
+	return false;
 }
