@@ -202,16 +202,19 @@ public fw_TraceAttack_Post(victim, attacker, Float:damage, Float:direction[3], t
 		// Apply nemesis knockback multiplier
 		xs_vec_mul_scalar(direction, get_pcvar_float(cvar_knockback_nemesis), direction)
 	}
-	// Ghost Class loaded?
-	else if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(victim))
-	{
-		// Apply ghost class knockback multiplier
-		xs_vec_mul_scalar(direction, zp_class_ghost_get_kb(zp_class_ghost_get_current(victim)), direction)
-	}
 	else if (get_pcvar_num(cvar_knockback_obey_class))
 	{
-		// Apply zombie class knockback multiplier
-		xs_vec_mul_scalar(direction, zp_class_zombie_get_kb(zp_class_zombie_get_current(victim)), direction)
+		// Ghost Class loaded?
+		if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(victim))
+		{
+			// Apply ghost class knockback multiplier
+			xs_vec_mul_scalar(direction, zp_class_ghost_get_kb(zp_class_ghost_get_current(victim)), direction)
+		}
+		else
+		{
+			// Apply zombie class knockback multiplier
+			xs_vec_mul_scalar(direction, zp_class_zombie_get_kb(zp_class_zombie_get_current(victim)), direction)
+		}
 	}
 	
 	// Add up the new vector
