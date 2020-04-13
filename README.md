@@ -2,7 +2,9 @@
 
 安装方法:
 
-1.下载安装metamod和amxmodx(链接https://www.amxmodx.org/downloads.php), 版本为1.82或更高, 详细方法详见https://wiki.alliedmods.net/Installing_AMX_Mod_X_Manually
+1.下载安装metamod和amxmodx(链接https://www.amxmodx.org/downloads.php), 版本为1.82或更高, 
+
+详细方法详见https://wiki.alliedmods.net/Installing_AMX_Mod_X_Manually
 
 2.下载本插件全部内容并覆盖至你的游戏文件夹cstrike下;
 
@@ -27,6 +29,10 @@
 6.新增开局音效与倒计时音效和文字(可自行设置每个模式的倒计时音效与文字)
 
 7.禁用引擎自带击退功能, 只使用ZP的击退功能
+
+8.增加每局雨雪天气随机
+
+9.增加每局地图亮度随机, 并伴随雷电
 
 新增服务器指令:
 
