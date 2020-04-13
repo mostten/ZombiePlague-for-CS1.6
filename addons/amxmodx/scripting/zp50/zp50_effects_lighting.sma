@@ -20,15 +20,18 @@ new const ZP_SETTINGS_FILE[] = "zombieplague.ini"
 // Defaults
 new const sky_names[][] = { "space" }
 new const thunder_lights[][] = { "ijklmnonmlkjihgfedcb" , "klmlkjihgfedcbaabcdedcb" , "bcdefedcijklmlkjihgfedcb" }
+new const map_lights[][] = { "a" , "b", "c" , "" , "d" }
 new const sound_thunder[][] = { "zombie_plague/thunder1.wav" , "zombie_plague/thunder2.wav" }
 
 #define SOUND_MAX_LENGTH 64
+#define LIGHT_MAX_LENGTH 2
 #define LIGHTS_MAX_LENGTH 32
 #define SKYNAME_MAX_LENGTH 32
 
 new g_sky_custom_enable = 1
 new Array:g_sky_names
 new Array:g_thunder_lights
+new Array:g_map_lights
 new Array:g_sound_thunder
 
 #define TASK_THUNDER 100
@@ -37,6 +40,7 @@ new Array:g_sound_thunder
 new g_SkyArrayIndex
 new g_ThunderLightIndex, g_ThunderLightMaxLen
 new g_ThunderLight[LIGHTS_MAX_LENGTH]
+new g_MapLight[LIGHT_MAX_LENGTH]
 
 new cvar_lighting, cvar_thunder_time
 new cvar_triggered_lights
@@ -47,8 +51,8 @@ public plugin_init()
 	
 	register_event("HLTV", "event_round_start", "a", "1=0", "2=0")
 	
-	cvar_lighting = register_cvar("zp_lighting", "d")
-	cvar_thunder_time = register_cvar("zp_thunder_time", "0")
+	cvar_lighting = register_cvar("zp_lighting", "1")
+	cvar_thunder_time = register_cvar("zp_thunder_time", "10")
 	cvar_triggered_lights = register_cvar("zp_triggered_lights", "1")
 	
 	// Set a random skybox?
@@ -70,6 +74,7 @@ public plugin_precache()
 	// Initialize arrays
 	g_sky_names = ArrayCreate(SKYNAME_MAX_LENGTH, 1)
 	g_thunder_lights = ArrayCreate(LIGHTS_MAX_LENGTH, 1)
+	g_map_lights = ArrayCreate(LIGHTS_MAX_LENGTH, 1)
 	g_sound_thunder = ArrayCreate(SOUND_MAX_LENGTH, 1)
 	
 	// Load from external file
@@ -77,6 +82,7 @@ public plugin_precache()
 		amx_save_setting_int(ZP_SETTINGS_FILE, "Custom Skies", "ENABLE", g_sky_custom_enable)
 	amx_load_setting_string_arr(ZP_SETTINGS_FILE, "Custom Skies", "SKY NAMES", g_sky_names)
 	amx_load_setting_string_arr(ZP_SETTINGS_FILE, "Lightning Lights Cycle", "LIGHTS", g_thunder_lights)
+	amx_load_setting_string_arr(ZP_SETTINGS_FILE, "Map Lights Cycle", "LIGHTS", g_map_lights)
 	amx_load_setting_string_arr(ZP_SETTINGS_FILE, "Sounds", "THUNDER", g_sound_thunder)
 	
 	// If we couldn't load from file, use and save default ones
@@ -96,6 +102,14 @@ public plugin_precache()
 		
 		// Save to external file
 		amx_save_setting_string_arr(ZP_SETTINGS_FILE, "Lightning Lights Cycle", "LIGHTS", g_thunder_lights)
+	}
+	if (ArraySize(g_map_lights) == 0)
+	{
+		for (index = 0; index < sizeof map_lights; index++)
+			ArrayPushString(g_map_lights, map_lights[index])
+		
+		// Save to external file
+		amx_save_setting_string_arr(ZP_SETTINGS_FILE, "Map Lights Cycle", "LIGHTS", g_map_lights)
 	}
 	if (ArraySize(g_sound_thunder) == 0)
 	{
@@ -150,6 +164,9 @@ public plugin_cfg()
 // Event Round Start
 public event_round_start()
 {
+	// Map lights random
+	get_random_map_light(g_MapLight);
+	
 	// Remove lights?
 	if (!get_pcvar_num(cvar_triggered_lights))
 		set_task(0.1, "remove_lights")
@@ -173,12 +190,12 @@ public remove_lights()
 public lighting_task()
 {
 	// Get lighting style
-	new lighting[2]
-	get_pcvar_string(cvar_lighting, lighting, charsmax(lighting))
-	
-	// Lighting disabled? ["0"]
-	if (lighting[0] == '0')
-		return;
+	new lighting[LIGHT_MAX_LENGTH];
+	switch(get_lights_configs(lighting))
+	{
+		case 0:{return;}
+		case 1:{format(lighting, charsmax(lighting), g_MapLight);}
+	}
 	
 	// Set thunder task if enabled and not already in place
 	if (get_pcvar_float(cvar_thunder_time) > 0.0 && !task_exists(TASK_THUNDER) && !task_exists(TASK_THUNDER_LIGHTS))
@@ -209,9 +226,22 @@ public thunder_task()
 	}
 	
 	// Apply current thunder light index
-	new lighting[2]
+	new lighting[LIGHT_MAX_LENGTH], lighting_config[LIGHT_MAX_LENGTH];
 	lighting[0] = g_ThunderLight[g_ThunderLightIndex]
-	engfunc(EngFunc_LightStyle, 0, lighting)
+	switch(get_lights_configs(lighting_config))
+	{
+		case 0:{engfunc(EngFunc_LightStyle, 0, lighting);}
+		case 1:
+		{
+			if(get_light_level(lighting) >= get_light_level(g_MapLight))
+				engfunc(EngFunc_LightStyle, 0, lighting);
+		}
+		default:
+		{
+			if(get_light_level(lighting) >= get_light_level(lighting_config))
+				engfunc(EngFunc_LightStyle, 0, lighting);
+		}
+	}
 	
 	// Increase thunder light index
 	g_ThunderLightIndex++
@@ -231,4 +261,105 @@ PlaySoundToClients(const sound[])
 		client_cmd(0, "mp3 play ^"sound/%s^"", sound)
 	else
 		client_cmd(0, "spk ^"%s^"", sound)
+}
+
+get_lights_configs(lighting[LIGHT_MAX_LENGTH])
+{
+	// Get lighting style
+	get_pcvar_string(cvar_lighting, lighting, LIGHT_MAX_LENGTH);
+	
+	// Lighting disabled? ["0"]
+	if (lighting[0] == '0')
+		return 0;
+	
+	// Lighting random? ["1"]
+	if (lighting[0] == '1')
+		return 1;
+	
+	return 2;
+}
+
+get_random_map_lights(lights[])
+{
+	new index = -1;
+	new lights_count = ArraySize(g_map_lights);
+	if(lights_count > 0)
+	{
+		index = random_num(0, lights_count - 1);
+		ArrayGetString(g_map_lights, index, lights, LIGHTS_MAX_LENGTH);
+	}
+	return index;
+}
+
+get_random_map_light(light[LIGHT_MAX_LENGTH])
+{
+	new index = -1;
+	new lights[LIGHTS_MAX_LENGTH];
+	if(get_random_map_lights(lights) >= 0)
+	{
+		new lights_count = strlen(lights);
+		if(lights_count > 0)
+		{
+			index = random_num(0, lights_count - 1);
+			light[0] = lights[index];
+		}
+	}
+	return index;
+}
+
+get_light_level(light[LIGHT_MAX_LENGTH])
+{
+	if(tolower(light[0]) == 'a')
+		return 1;
+	else if(tolower(light[0]) == 'b')
+		return 2;
+	else if(tolower(light[0]) == 'c')
+		return 3;
+	else if(tolower(light[0]) == 'd')
+		return 4;
+	else if(tolower(light[0]) == 'e')
+		return 5;
+	else if(tolower(light[0]) == 'f')
+		return 6;
+	else if(tolower(light[0]) == 'g')
+		return 7;
+	else if(tolower(light[0]) == 'h')
+		return 8;
+	else if(tolower(light[0]) == 'i')
+		return 9;
+	else if(tolower(light[0]) == 'j')
+		return 10;
+	else if(tolower(light[0]) == 'k')
+		return 11;
+	else if(tolower(light[0]) == 'l')
+		return 12;
+	else if(tolower(light[0]) == 'm')
+		return 13;
+	else if(tolower(light[0]) == 'n')
+		return 14;
+	else if(tolower(light[0]) == 'o')
+		return 15;
+	else if(tolower(light[0]) == 'p')
+		return 16;
+	else if(tolower(light[0]) == 'q')
+		return 17;
+	else if(tolower(light[0]) == 'r')
+		return 18;
+	else if(tolower(light[0]) == 's')
+		return 19;
+	else if(tolower(light[0]) == 't')
+		return 20;
+	else if(tolower(light[0]) == 'u')
+		return 21;
+	else if(tolower(light[0]) == 'v')
+		return 22;
+	else if(tolower(light[0]) == 'w')
+		return 23;
+	else if(tolower(light[0]) == 'x')
+		return 24;
+	else if(tolower(light[0]) == 'y')
+		return 25;
+	else if(tolower(light[0]) == 'z')
+		return 26;
+	return 0;
 }
