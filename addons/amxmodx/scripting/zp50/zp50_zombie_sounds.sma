@@ -107,8 +107,6 @@ public plugin_init()
 	register_forward(FM_EmitSound, "fw_EmitSound");
 	RegisterHam(Ham_Spawn, "player", "fw_PlayerSpawn", 1);
 	RegisterHamBots(Ham_Spawn, "fw_PlayerSpawn", 1);
-	RegisterHam(Ham_Killed, "player", "fw_PlayerKilled");
-	RegisterHamBots(Ham_Killed, "fw_PlayerKilled");
 	
 	cvar_zombie_sounds_pain = register_cvar("zp_zombie_sounds_pain", "1");
 	cvar_zombie_sounds_attack = register_cvar("zp_zombie_sounds_attack", "1");
@@ -925,6 +923,19 @@ public fw_EmitSound(id, channel, const sample[], Float:volume, Float:attn, flags
 		}
 	}
 	
+	if (get_pcvar_num(cvar_zombie_sounds_headshot))
+	{
+		if (StrContains(sample, "/headshot") > -1) // headshot
+		{
+			if (GetCustomRandomSound(GetClientSoundTeamClass(id), GetClientSoundTeam(id), SoundType_HeadShot, sound))
+			{
+				emit_sound(id, channel, sound, volume, attn, flags, pitch);
+				return FMRES_SUPERCEDE;
+			}
+			return FMRES_IGNORED;
+		}
+	}
+	
 	return FMRES_IGNORED;
 }
 
@@ -933,16 +944,6 @@ public fw_PlayerSpawn(id)
 {
 	if (get_pcvar_num(cvar_zombie_sounds_step))
 		set_task(ZP_STEP_DELAY, "zombie_step_sounds", id+TASK_STEP_SOUNDS, _, _, "b");
-}
-
-// Ham Player Killed Forward
-public fw_PlayerKilled(victim, attacker, shouldgib)
-{
-	// Remove idle sounds task
-	remove_task(victim+TASK_IDLE_SOUNDS);
-	
-	// Remove step sounds task
-	remove_task(victim+TASK_STEP_SOUNDS);
 }
 
 public client_disconnect(id)
@@ -1023,12 +1024,19 @@ public zombie_step_sounds(taskid)
 
 public client_death(killer, victim, wpnindex, hitplace, TK)
 {
+	// Remove idle sounds task
+	remove_task(victim+TASK_IDLE_SOUNDS);
+	
+	// Remove step sounds task
+	remove_task(victim+TASK_STEP_SOUNDS);
+	
 	static sound[SOUND_MAX_LENGTH];
 	new bool:headshot = (hitplace == HIT_HEAD);
 	new bool:selfkill = (killer == victim);
-	if(cvar_zombie_sounds_headshot && headshot && !selfkill && GetCustomRandomSound(GetClientSoundTeamClass(killer), GetClientSoundTeam(killer), SoundType_HeadShot, sound))
+	if(get_pcvar_num(cvar_zombie_sounds_headshot) && headshot && !selfkill && GetCustomRandomSound(GetClientSoundTeamClass(killer), GetClientSoundTeam(killer), SoundType_HeadShot, sound))
 	{
 		PlaySoundToClient(killer, sound);
+		emit_sound(victim, CHAN_VOICE, sound, VOL_NORM, ATTN_NORM, 0, PITCH_NORM);
 	}
 }
 
