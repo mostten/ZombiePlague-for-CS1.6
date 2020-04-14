@@ -30,25 +30,24 @@ new const g_ambience_ents[][] = { "env_fog", "env_rain", "env_snow" };
 
 
 #define MAXPLAYERS 32
-#define CLASS_HUD_ENTITY "hud_entity"
 
 enum _:Ambience_Effects{
 	Ambience_Sunny = 0,
 	Ambience_Rain,
 	Ambience_Snow,
-	Ambience_RainAndSnow
+	Ambience_Fog
 };
 
-new g_hud;
 new g_weather = Ambience_Sunny;
-new g_msg_recieve;
-new bool:g_is_hud_removed;
+new g_msg_fog, g_msg_recieve;
 
 public plugin_init()
 {
 	register_plugin("[ZP] Ambience Effects", ZP_VERSION_STRING, "ZP Dev Team rewrite by Mostten");
+	g_msg_fog = get_user_msgid ("Fog");
 	g_msg_recieve = get_user_msgid("ReceiveW");
 	register_message(g_msg_recieve, "MsgReceived");
+	register_event("HLTV", "event_round_start", "a", "1=0", "2=0")
 	register_logevent("Event_RoundEnd", 2, "1&Restart_Round");
 	register_logevent("Event_RoundEnd", 2, "1=Game_Commencing");
 	register_logevent("Event_RoundEnd", 2, "1=Round_End");
@@ -90,12 +89,50 @@ ambience_create()
 {
 	engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_snow"));
 	engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_rain"));
-	register_forward(FM_Think, "Fwd_Think", 1);
+}
+
+fog_create(const client = 0, const color_string[FOG_VALUE_MAX_LENGTH], const Float:density_f = 0.001, bool:clear = false)
+{
+	new color[3];
+	str_tocolor(color_string, color);
+	if (g_msg_fog)
+	{
+		new density = _:floatclamp(density_f, 0.0001, 0.25) * _:!clear;
+		message_begin(client ? MSG_ONE_UNRELIABLE : MSG_BROADCAST, g_msg_fog, .player = client);
+		write_byte(clamp(color[0], 0, 255));
+		write_byte(clamp(color[1], 0, 255));
+		write_byte(clamp(color[2], 0, 255));
+		write_long(_:density);
+		message_end();
+	}
+}
+
+str_tocolor(const color_string[FOG_VALUE_MAX_LENGTH], color_array[3])
+{
+	new color_temp[FOG_VALUE_MAX_LENGTH];
+	format(color_temp, FOG_VALUE_MAX_LENGTH, color_string);
+	
+	new index = 0;
+	new num[FOG_VALUE_MAX_LENGTH];
+	for(new i = 0; i < FOG_VALUE_MAX_LENGTH; i++)
+	{
+		if(color_temp[i] == ' ' || color_temp[i] == ',' || !isalnum(color_temp[i]))
+		{
+			if(strlen(num) > 0 && is_str_num(num))
+				color_array[index] = str_to_num(num);
+			format(num, FOG_VALUE_MAX_LENGTH, "");
+			index++;
+			if(index >= sizeof(color_array))
+				return;
+			continue;
+		}
+		format(num, FOG_VALUE_MAX_LENGTH, "%s%c", num, color_temp[i]);
+	}
 }
 
 get_ambience_random()
 {
-	switch(random_num(Ambience_Sunny, Ambience_Effects - 1))
+	switch(random_num(Ambience_Sunny, Ambience_Fog))
 	{
 		case Ambience_Rain:
 		{
@@ -103,45 +140,29 @@ get_ambience_random()
 				return  Ambience_Rain;
 			else if(g_ambience_snow > 0)
 				return Ambience_Snow;
+			else if(g_ambience_fog > 0)
+				return Ambience_Fog;
 		}
 		case Ambience_Snow:
 		{
 			if(g_ambience_snow > 0)
 				return  Ambience_Snow;
+			else if(g_ambience_fog > 0)
+				return Ambience_Fog;
 			else if(g_ambience_rain > 0)
-				return Ambience_Rain;
+				return  Ambience_Rain;
 		}
-		case Ambience_RainAndSnow:
+		case Ambience_Fog:
 		{
-			if(g_ambience_rain > 0 && g_ambience_snow > 0)
-				return Ambience_RainAndSnow;
+			if(g_ambience_fog > 0)
+				return Ambience_Fog;
+			else if(g_ambience_rain > 0)
+				return  Ambience_Rain;
+			else if(g_ambience_snow > 0)
+				return Ambience_Snow;
 		}
 	}
 	return Ambience_Sunny;
-}
-
-hud_entity_remove(){
-	if (pev_valid(g_hud))
-	{
-		new classname[32];
-		pev(g_hud, pev_classname, classname, charsmax(classname));
-		if (equal(classname, CLASS_HUD_ENTITY))
-			engfunc(EngFunc_RemoveEntity, g_hud);
-		g_is_hud_removed = true;
-	}
-}
-
-hud_entity_create()
-{
-	new info_target = engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "info_target"));
-	if(info_target)
-	{
-		dllfunc(DLLFunc_Think, info_target);
-		set_pev(g_hud, pev_classname, CLASS_HUD_ENTITY);
-		dllfunc(DLLFunc_Spawn, info_target);
-		set_pev(info_target, pev_nextthink, get_gametime() + 0.1);
-	}
-	return info_target;
 }
 
 get_ambience_config()
@@ -152,44 +173,49 @@ get_ambience_config()
 	}
 	else
 	{
-		if(g_ambience_rain > 0 && g_ambience_snow > 0)
-		{
-			return Ambience_RainAndSnow;
-		}
+		if(get_ambience_config_count() > 1)
+			return get_ambience_random();
 		else if (g_ambience_rain > 0)
-		{
 			return  Ambience_Rain;
-		}
 		else if (g_ambience_snow > 0)
-		{
 			return Ambience_Snow;
-		}
+		else if (g_ambience_fog > 0)
+			return Ambience_Fog;
 	}
 	return Ambience_Sunny;
 }
 
+get_ambience_config_count()
+{
+	new count = 0;
+	if(g_ambience_rain > 0)
+		count++;
+	if(g_ambience_snow > 0)
+		count++;
+	if(g_ambience_fog > 0)
+		count++;
+	return count;
+}
+
+// Event Round Start
+public event_round_start()
+{
+	if(g_weather == Ambience_Fog)
+		fog_create(0, g_ambience_fog_color, str_to_float(g_ambience_fog_density), false);
+}
+
 public Event_RoundEnd()
 {
+	fog_create(0, g_ambience_fog_color, str_to_float(g_ambience_fog_density), true);
 	switch(get_ambience_config())
 	{
 		case Ambience_Rain:
 		{
-			hud_entity_remove();
 			g_weather = Ambience_Rain;
 		}
 		case Ambience_Snow:
 		{
-			hud_entity_remove();
 			g_weather = Ambience_Snow;
-		}
-		case Ambience_RainAndSnow:
-		{
-			g_weather = Ambience_Snow;
-			if(g_is_hud_removed)
-			{
-				g_hud = hud_entity_create();
-				g_is_hud_removed = false;
-			}
 		}
 		default:{g_weather = Ambience_Sunny;}
 	}
@@ -197,7 +223,7 @@ public Event_RoundEnd()
 
 public MsgReceived(msg_id, msg_dest, msg_entity)
 {
-	if(get_ambience_config() != Ambience_RainAndSnow)
+	if(g_weather != Ambience_Fog)
 		set_msg_arg_int(1, ARG_BYTE, g_weather);
 }
 
@@ -224,44 +250,6 @@ public fw_Spawn(entity)
 	}
 	
 	return FMRES_IGNORED;
-}
-
-public Fwd_Think(entity)
-{
-	if (!pev_valid(entity))
-		return FMRES_IGNORED;
-	
-	new classname[32];
-	pev(entity, pev_classname, classname, sizeof(classname));
-	
-	if(equal(classname, CLASS_HUD_ENTITY))
-		Fwd_Weather_Think(entity);
-	
-	return FMRES_HANDLED;
-}
-
-Fwd_Weather_Think(entity)
-{
-	if (entity != g_hud)
-		return;
-	
-	switch(g_weather)
-	{
-		case Ambience_Sunny:{g_weather = Ambience_Rain;}
-		case Ambience_Rain:{g_weather = Ambience_Snow;}
-		case Ambience_Snow:{g_weather = Ambience_Rain;}
-		default:{g_weather = Ambience_Rain;}
-	}
-	for(new client = 1; client <= MAXPLAYERS; client++) 
-	{
-		if(is_user_connected(client))
-		{
-			message_begin(MSG_ONE_UNRELIABLE, g_msg_recieve, {0,0,0}, client);
-			write_byte(g_weather);
-			message_end();
-		}
-	}
-	set_pev(g_hud, pev_nextthink, get_gametime() + 0.1);
 }
 
 // Set an entity's key value (from fakemeta_util)
