@@ -39,6 +39,7 @@ new g_model_vknife_human[MODEL_MAX_LENGTH] = "models/v_knife.mdl"
 #define HUMANS_DEFAULT_HEALTH 100
 #define HUMANS_DEFAULT_SPEED 1.0
 #define HUMANS_DEFAULT_GRAVITY 1.0
+#define HUMANS_DEFAULT_DMULTIPLIER -1.0
 
 // CS Player PData Offsets (win32)
 const OFFSET_CSMENUCODE = 205
@@ -62,6 +63,8 @@ new Array:g_HumanClassDesc
 new Array:g_HumanClassHealth
 new Array:g_HumanClassSpeed
 new Array:g_HumanClassGravity
+new Array:g_HumanClassDMFile
+new Array:g_HumanClassDamageMultiplier
 new Array:g_HumanClassModelsFile
 new Array:g_HumanClassModelsHandle
 new g_HumanClass[MAXPLAYERS+1]
@@ -90,6 +93,8 @@ public plugin_cfg()
 		ArrayPushCell(g_HumanClassHealth, HUMANS_DEFAULT_HEALTH)
 		ArrayPushCell(g_HumanClassSpeed, HUMANS_DEFAULT_SPEED)
 		ArrayPushCell(g_HumanClassGravity, HUMANS_DEFAULT_GRAVITY)
+		ArrayPushCell(g_HumanClassDMFile, false)
+		ArrayPushCell(g_HumanClassDamageMultiplier, HUMANS_DEFAULT_DMULTIPLIER)
 		ArrayPushCell(g_HumanClassModelsFile, false)
 		ArrayPushCell(g_HumanClassModelsHandle, Invalid_Array)
 		g_HumanClassCount++
@@ -115,10 +120,12 @@ public plugin_natives()
 	register_native("zp_class_human_get_max_health", "_class_human_get_max_health")
 	register_native("zp_class_human_register", "native_class_human_register")
 	register_native("zp_class_human_register_model", "_class_human_register_model")
+	register_native("zp_class_human_register_dm", "native_class_human_register_dm")
 	register_native("zp_class_human_get_id", "native_class_human_get_id")
 	register_native("zp_class_human_get_name", "native_class_human_get_name")
 	register_native("zp_class_human_get_real_name", "_class_human_get_real_name")
 	register_native("zp_class_human_get_desc", "native_class_human_get_desc")
+	register_native("zp_class_human_get_dm", "native_class_human_get_dm")
 	register_native("zp_class_human_get_count", "native_class_human_get_count")
 	register_native("zp_class_human_show_menu", "native_class_human_show_menu")
 	register_native("zp_class_human_menu_text_add", "_class_human_menu_text_add")
@@ -130,6 +137,8 @@ public plugin_natives()
 	g_HumanClassHealth = ArrayCreate(1, 1)
 	g_HumanClassSpeed = ArrayCreate(1, 1)
 	g_HumanClassGravity = ArrayCreate(1, 1)
+	g_HumanClassDMFile = ArrayCreate(1, 1)
+	g_HumanClassDamageMultiplier = ArrayCreate(1, 1)
 	g_HumanClassModelsFile = ArrayCreate(1, 1)
 	g_HumanClassModelsHandle = ArrayCreate(1, 1)
 }
@@ -494,6 +503,17 @@ public native_class_human_register(plugin_id, num_params)
 		amx_save_setting_float(ZP_HUMANCLASSES_FILE, real_name, "GRAVITY", gravity)
 	ArrayPushCell(g_HumanClassGravity, gravity)
 	
+	// Damage multiplier
+	new Float:damage_multiplier = HUMANS_DEFAULT_DMULTIPLIER
+	if (!amx_load_setting_float(ZP_HUMANCLASSES_FILE, real_name, "DAMAGE MULTIPLIER", damage_multiplier))
+	{
+		ArrayPushCell(g_HumanClassDMFile, false)
+		amx_save_setting_float(ZP_HUMANCLASSES_FILE, real_name, "DAMAGE MULTIPLIER", damage_multiplier)
+	}
+	else
+		ArrayPushCell(g_HumanClassDMFile, true)
+	ArrayPushCell(g_HumanClassDamageMultiplier, damage_multiplier)
+	
 	g_HumanClassCount++
 	return g_HumanClassCount - 1;
 }
@@ -538,6 +558,33 @@ public _class_human_register_model(plugin_id, num_params)
 	new real_name[32]
 	ArrayGetString(g_HumanClassRealName, classid, real_name, charsmax(real_name))
 	amx_save_setting_string_arr(ZP_HUMANCLASSES_FILE, real_name, "MODELS", class_models)
+	
+	return true;
+}
+
+public native_class_human_register_dm(plugin_id, num_params)
+{
+	new classid = get_param(1)
+	
+	if (classid < 0 || classid >= g_HumanClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid human class id (%d)", classid)
+		return false;
+	}
+	
+	// Damage multiplier already loaded from file
+	if (ArrayGetCell(g_HumanClassDMFile, classid))
+		return true;
+	
+	new Float:damage_multiplier = get_param_f(2)
+	
+	// Set human class damage multiplier
+	ArraySetCell(g_HumanClassDamageMultiplier, classid, damage_multiplier)
+	
+	// Save to file
+	new real_name[32]
+	ArrayGetString(g_HumanClassRealName, classid, real_name, charsmax(real_name))
+	amx_save_setting_float(ZP_HUMANCLASSES_FILE, real_name, "DAMAGE MULTIPLIER", damage_multiplier)
 	
 	return true;
 }
@@ -611,6 +658,20 @@ public native_class_human_get_desc(plugin_id, num_params)
 	new len = get_param(3)
 	set_string(2, description, len)
 	return true;
+}
+
+public Float:native_class_human_get_dm(plugin_id, num_params)
+{
+	new classid = get_param(1)
+	
+	if (classid < 0 || classid >= g_HumanClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid human class id (%d)", classid)
+		return HUMANS_DEFAULT_DMULTIPLIER;
+	}
+	
+	// Return human class damage multiplier
+	return ArrayGetCell(g_HumanClassDamageMultiplier, classid);
 }
 
 public native_class_human_get_count(plugin_id, num_params)

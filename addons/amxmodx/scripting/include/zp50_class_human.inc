@@ -77,6 +77,15 @@ native zp_class_human_register(const name[], const description[], health, Float:
 native zp_class_human_register_model(classid, const model[])
 
 /**
+ * Registers a human class' damage multiplier.
+ *
+ * @param classid			A valid human class ID.
+ * @param damage_multiplier	Damage multiplier.
+ * @return					True on success, false otherwise.
+ */
+native zp_class_human_register_dm(classid, Float:damage_multiplier)
+
+/**
  * Returns a human class' ID.
  *
  * @param name		Class name to look for.
@@ -113,6 +122,14 @@ native zp_class_human_get_real_name(classid, real_name[], len)
  * @return				True on success, false otherwise.
  */
 native zp_class_human_get_desc(classid, description[], len)
+
+/**
+ * Returns a human class' damage multiplier.
+ *
+ * @param classid		A valid human class ID.
+ * @return				Damage multiplier (float value).
+ */
+native Float:zp_class_human_get_dm(classid)
 
 /**
  * Returns number of registered human classes.

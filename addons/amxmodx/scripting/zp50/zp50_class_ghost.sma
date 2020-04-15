@@ -31,6 +31,7 @@ new const ZP_GHOSTCLASSES_FILE[] = "zp_ghostclasses.ini"
 #define GHOSTS_DEFAULT_HEALTH 1800
 #define GHOSTS_DEFAULT_SPEED 0.75
 #define GHOSTS_DEFAULT_GRAVITY 1.0
+#define GHOSTS_DEFAULT_DMULTIPLIER -1.0
 #define GHOSTS_DEFAULT_MODEL "zombie"
 #define GHOSTS_DEFAULT_CLAWMODEL "models/zombie_plague/zp_ghost/v_knife_ghost.mdl"
 #define GHOSTS_DEFAULT_KNOCKBACK 1.0
@@ -65,6 +66,8 @@ new Array:g_GhostClassDesc
 new Array:g_GhostClassHealth
 new Array:g_GhostClassSpeed
 new Array:g_GhostClassGravity
+new Array:g_GhostClassDMFile
+new Array:g_GhostClassDamageMultiplier
 new Array:g_GhostClassKnockbackFile
 new Array:g_GhostClassKnockback
 new Array:g_GhostClassModelsFile
@@ -124,6 +127,8 @@ public plugin_cfg()
 		ArrayPushCell(g_GhostClassGravity, GHOSTS_DEFAULT_GRAVITY)
 		ArrayPushCell(g_GhostClassKnockbackFile, false)
 		ArrayPushCell(g_GhostClassKnockback, GHOSTS_DEFAULT_KNOCKBACK)
+		ArrayPushCell(g_GhostClassDMFile, false)
+		ArrayPushCell(g_GhostClassDamageMultiplier, GHOSTS_DEFAULT_DMULTIPLIER)
 		ArrayPushCell(g_GhostClassModelsFile, false)
 		ArrayPushCell(g_GhostClassModelsHandle, Invalid_Array)
 		ArrayPushCell(g_GhostClassClawsFile, false)
@@ -148,11 +153,13 @@ public plugin_natives()
 	register_native("zp_class_ghost_register_model", "_class_ghost_register_model")
 	register_native("zp_class_ghost_register_claw", "_class_ghost_register_claw")
 	register_native("zp_class_ghost_register_kb", "native_class_ghost_register_kb")
+	register_native("zp_class_ghost_register_dm", "native_class_ghost_register_dm")
 	register_native("zp_class_ghost_get_id", "native_class_ghost_get_id")
 	register_native("zp_class_ghost_get_name", "native_class_ghost_get_name")
 	register_native("zp_class_ghost_get_real_name", "_class_ghost_get_real_name")
 	register_native("zp_class_ghost_get_desc", "native_class_ghost_get_desc")
 	register_native("zp_class_ghost_get_kb", "native_class_ghost_get_kb")
+	register_native("zp_class_ghost_get_dm", "native_class_ghost_get_dm")
 	register_native("zp_class_ghost_get_count", "native_class_ghost_get_count")
 	register_native("zp_class_ghost_show_menu", "native_class_ghost_show_menu")
 	register_native("zp_class_ghost_menu_text_add", "_class_ghost_menu_text_add")
@@ -174,6 +181,8 @@ public plugin_natives()
 	g_GhostClassGravity = ArrayCreate(1, 1)
 	g_GhostClassKnockback = ArrayCreate(1, 1)
 	g_GhostClassKnockbackFile = ArrayCreate(1, 1)
+	g_GhostClassDMFile = ArrayCreate(1, 1)
+	g_GhostClassDamageMultiplier = ArrayCreate(1, 1)
 	g_GhostClassModelsHandle = ArrayCreate(1, 1)
 	g_GhostClassModelsFile = ArrayCreate(1, 1)
 	g_GhostClassClawsHandle = ArrayCreate(1, 1)
@@ -642,6 +651,17 @@ public native_class_ghost_register(plugin_id, num_params)
 		amx_save_setting_float(ZP_GHOSTCLASSES_FILE, real_name, "GRAVITY", gravity)
 	ArrayPushCell(g_GhostClassGravity, gravity)
 	
+	// Damage multiplier
+	new Float:damage_multiplier = GHOSTS_DEFAULT_DMULTIPLIER
+	if (!amx_load_setting_float(ZP_GHOSTCLASSES_FILE, real_name, "DAMAGE MULTIPLIER", damage_multiplier))
+	{
+		ArrayPushCell(g_GhostClassDMFile, false)
+		amx_save_setting_float(ZP_GHOSTCLASSES_FILE, real_name, "DAMAGE MULTIPLIER", damage_multiplier)
+	}
+	else
+		ArrayPushCell(g_GhostClassDMFile, true)
+	ArrayPushCell(g_GhostClassDamageMultiplier, damage_multiplier)
+	
 	// Knockback
 	new Float:knockback = GHOSTS_DEFAULT_KNOCKBACK
 	if (!amx_load_setting_float(ZP_GHOSTCLASSES_FILE, real_name, "KNOCKBACK", knockback))
@@ -765,6 +785,33 @@ public native_class_ghost_register_kb(plugin_id, num_params)
 	return true;
 }
 
+public native_class_ghost_register_dm(plugin_id, num_params)
+{
+	new classid = get_param(1)
+	
+	if (classid < 0 || classid >= g_GhostClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid ghost class id (%d)", classid)
+		return false;
+	}
+	
+	// Damage multiplier already loaded from file
+	if (ArrayGetCell(g_GhostClassDMFile, classid))
+		return true;
+	
+	new Float:damage_multiplier = get_param_f(2)
+	
+	// Set ghost class damage multiplier
+	ArraySetCell(g_GhostClassDamageMultiplier, classid, damage_multiplier)
+	
+	// Save to file
+	new real_name[32]
+	ArrayGetString(g_GhostClassRealName, classid, real_name, charsmax(real_name))
+	amx_save_setting_float(ZP_GHOSTCLASSES_FILE, real_name, "DAMAGE MULTIPLIER", damage_multiplier)
+	
+	return true;
+}
+
 public native_class_ghost_get_id(plugin_id, num_params)
 {
 	new real_name[32]
@@ -846,8 +893,22 @@ public Float:native_class_ghost_get_kb(plugin_id, num_params)
 		return GHOSTS_DEFAULT_KNOCKBACK;
 	}
 	
-	// Return ghost class knockback)
+	// Return ghost class knockback
 	return ArrayGetCell(g_GhostClassKnockback, classid);
+}
+
+public Float:native_class_ghost_get_dm(plugin_id, num_params)
+{
+	new classid = get_param(1)
+	
+	if (classid < 0 || classid >= g_GhostClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid ghost class id (%d)", classid)
+		return GHOSTS_DEFAULT_DMULTIPLIER;
+	}
+	
+	// Return ghost class damage multiplier)
+	return ArrayGetCell(g_GhostClassDamageMultiplier, classid);
 }
 
 public native_class_ghost_get_count(plugin_id, num_params)

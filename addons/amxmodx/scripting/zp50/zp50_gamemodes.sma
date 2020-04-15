@@ -75,7 +75,7 @@ new Float:g_NextAttackTime[MAXPLAYERS+1]
 new g_AttackType[MAXPLAYERS+1]
 
 enum{
-	AttackType_None = 0,
+	AttackType_Other = 0,
 	AttackType_Primary,
 	AttackType_Secondary
 }
@@ -527,21 +527,28 @@ public fw_TakeDamage(victim, inflictor, attacker, Float:damage, damage_type)
 	if (zp_core_is_zombie(attacker) == zp_core_is_zombie(victim))
 		return HAM_SUPERCEDE;
 	
+	new Float:damageNew = damage;
+	new bool:damageChanged = false;
+	
 	// 幽灵模式
 	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(attacker))
 	{
 		// 幽灵正在击杀人类...
-		new bool:damageChanged = false;
 		if (!zp_class_ghost_get(victim))
 		{
 			//重置伤害值
-			new Float:damageNew = damage;
 			switch(g_AttackType[attacker])
 			{
 				case AttackType_Primary:{damageNew = zp_get_primary_damage(zp_class_ghost_get_current(attacker));}
 				case AttackType_Secondary:{damageNew = zp_get_secondary_damage(zp_class_ghost_get_current(attacker));}
+				default:
+				{
+					new Float:damage_multiplier = zp_class_ghost_get_dm(zp_class_ghost_get_current(attacker));
+					if(damage_multiplier >= 0.0)
+						damageNew *= damage_multiplier;
+				}
 			}
-			g_AttackType[attacker] = AttackType_None;
+			g_AttackType[attacker] = AttackType_Other;
 			damageChanged = damageNew != damage && damageNew > 0.0;
 			if(damageChanged)
 			{
@@ -567,30 +574,66 @@ public fw_TakeDamage(victim, inflictor, attacker, Float:damage, damage_type)
 	}
 	
 	// Mode allows infection and zombie attacking human...
-	if (g_AllowInfection && zp_core_is_zombie(attacker) && !zp_core_is_zombie(victim))
+	if (zp_core_is_zombie(attacker) && !zp_core_is_zombie(victim))
 	{
-		// Nemesis shouldn't be infecting
-		if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(attacker))
-			return HAM_IGNORED;
-		
-		// Survivor shouldn't be infected
-		if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(victim))
-			return HAM_IGNORED;
-		
-		// Prevent infection/damage by HE grenade (bugfix)
-		if (damage_type & DMG_HEGRENADE)
-			return HAM_SUPERCEDE;
-		
-		// Last human is killed to trigger round end
-		if (zp_core_get_human_count() == 1)
-			return HAM_IGNORED;
-		
-		// Infect only if damage is done to victim
-		if (damage > 0.0 && GetHamReturnStatus() != HAM_SUPERCEDE)
+		new classid = zp_class_zombie_get_current(attacker);
+		if(g_AllowInfection)
 		{
-			// Infect victim!
-			zp_core_infect(victim, attacker)
-			return HAM_SUPERCEDE;
+			// Nemesis shouldn't be infecting
+			if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(attacker))
+				return HAM_IGNORED;
+			
+			// Survivor shouldn't be infected
+			if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(victim))
+				return HAM_IGNORED;
+			
+			// Prevent infection/damage by HE grenade (bugfix)
+			if (damage_type & DMG_HEGRENADE)
+				return HAM_SUPERCEDE;
+			
+			// Last human is killed to trigger round end
+			if (zp_core_get_human_count() == 1)
+				return HAM_IGNORED;
+			
+			// Infect only if damage is done to victim
+			if (damage > 0.0 && GetHamReturnStatus() != HAM_SUPERCEDE)
+			{
+				// Infect victim!
+				zp_core_infect(victim, attacker)
+				return HAM_SUPERCEDE;
+			}
+		}
+		else if(classid != ZP_INVALID_ZOMBIE_CLASS)
+		{
+			new Float:damage_multiplier = zp_class_zombie_get_dm(classid);
+			if(damage_multiplier >= 0.0)
+				damageNew *= damage_multiplier;
+			damageChanged = damageNew != damage && damageNew > 0.0;
+			if(damageChanged)
+			{
+				damage = damageNew;
+				SetHamParamFloat(4, damageNew);
+			}
+			return damageChanged?HAM_HANDLED:HAM_IGNORED;
+		}
+	}
+	
+	// 人类攻击僵尸...
+	if (!zp_core_is_zombie(attacker) && zp_core_is_zombie(victim))
+	{
+		new classid = zp_class_human_get_current(attacker);
+		if(classid != ZP_INVALID_HUMAN_CLASS)
+		{
+			new Float:damage_multiplier = zp_class_human_get_dm(classid);
+			if(damage_multiplier >= 0.0)
+				damageNew *= damage_multiplier;
+			damageChanged = damageNew != damage && damageNew > 0.0;
+			if(damageChanged)
+			{
+				damage = damageNew;
+				SetHamParamFloat(4, damageNew);
+			}
+			return damageChanged?HAM_HANDLED:HAM_IGNORED;
 		}
 	}
 	

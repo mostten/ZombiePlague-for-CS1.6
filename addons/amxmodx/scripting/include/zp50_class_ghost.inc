@@ -95,6 +95,15 @@ native zp_class_ghost_register_claw(classid, const clawmodel[])
 native zp_class_ghost_register_kb(classid, Float:knockback)
 
 /**
+ * Registers a ghost class' damage multiplier.
+ *
+ * @param classid			A valid ghost class ID.
+ * @param damage_multiplier	Damage multiplier.
+ * @return					True on success, false otherwise.
+ */
+native zp_class_ghost_register_dm(classid, Float:damage_multiplier)
+
+/**
  * Returns a ghost class' ID.
  *
  * @param name		Class name to look for.
@@ -139,6 +148,14 @@ native zp_class_ghost_get_desc(classid, description[], len)
  * @return				Knockback multiplier (float value).
  */
 native Float:zp_class_ghost_get_kb(classid)
+
+/**
+ * Returns a ghost class' damage multiplier.
+ *
+ * @param classid		A valid ghost class ID.
+ * @return				Damage multiplier (float value).
+ */
+native Float:zp_class_ghost_get_dm(classid)
 
 /**
  * Returns number of registered ghost classes.

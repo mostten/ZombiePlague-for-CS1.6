@@ -94,6 +94,15 @@ native zp_class_zombie_register_claw(classid, const clawmodel[])
 native zp_class_zombie_register_kb(classid, Float:knockback)
 
 /**
+ * Registers a zombie class' damage multiplier.
+ *
+ * @param classid			A valid zombie class ID.
+ * @param damage_multiplier	Damage multiplier.
+ * @return					True on success, false otherwise.
+ */
+native zp_class_zombie_register_dm(classid, Float:damage_multiplier)
+
+/**
  * Returns a zombie class' ID.
  *
  * @param name		Class name to look for.
@@ -138,6 +147,14 @@ native zp_class_zombie_get_desc(classid, description[], len)
  * @return				Knockback multiplier (float value).
  */
 native Float:zp_class_zombie_get_kb(classid)
+
+/**
+ * Returns a zombie class' damage multiplier.
+ *
+ * @param classid		A valid zombie class ID.
+ * @return				Damage multiplier (float value).
+ */
+native Float:zp_class_zombie_get_dm(classid)
 
 /**
  * Returns number of registered zombie classes.

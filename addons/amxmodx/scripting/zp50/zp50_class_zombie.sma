@@ -35,6 +35,7 @@ new const ZP_ZOMBIECLASSES_FILE[] = "zp_zombieclasses.ini"
 #define ZOMBIES_DEFAULT_HEALTH 1800
 #define ZOMBIES_DEFAULT_SPEED 0.75
 #define ZOMBIES_DEFAULT_GRAVITY 1.0
+#define ZOMBIES_DEFAULT_DMULTIPLIER -1.0
 #define ZOMBIES_DEFAULT_MODEL "zombie"
 #define ZOMBIES_DEFAULT_CLAWMODEL "models/zombie_plague/v_knife_zombie.mdl"
 #define ZOMBIES_DEFAULT_KNOCKBACK 1.0
@@ -65,6 +66,8 @@ new Array:g_ZombieClassDesc
 new Array:g_ZombieClassHealth
 new Array:g_ZombieClassSpeed
 new Array:g_ZombieClassGravity
+new Array:g_ZombieClassDMFile
+new Array:g_ZombieClassDamageMultiplier
 new Array:g_ZombieClassKnockbackFile
 new Array:g_ZombieClassKnockback
 new Array:g_ZombieClassModelsFile
@@ -109,6 +112,8 @@ public plugin_cfg()
 		ArrayPushCell(g_ZombieClassHealth, ZOMBIES_DEFAULT_HEALTH)
 		ArrayPushCell(g_ZombieClassSpeed, ZOMBIES_DEFAULT_SPEED)
 		ArrayPushCell(g_ZombieClassGravity, ZOMBIES_DEFAULT_GRAVITY)
+		ArrayPushCell(g_ZombieClassDMFile, false)
+		ArrayPushCell(g_ZombieClassDamageMultiplier, ZOMBIES_DEFAULT_DMULTIPLIER)
 		ArrayPushCell(g_ZombieClassKnockbackFile, false)
 		ArrayPushCell(g_ZombieClassKnockback, ZOMBIES_DEFAULT_KNOCKBACK)
 		ArrayPushCell(g_ZombieClassModelsFile, false)
@@ -130,11 +135,13 @@ public plugin_natives()
 	register_native("zp_class_zombie_register_model", "_class_zombie_register_model")
 	register_native("zp_class_zombie_register_claw", "_class_zombie_register_claw")
 	register_native("zp_class_zombie_register_kb", "native_class_zombie_register_kb")
+	register_native("zp_class_zombie_register_dm", "native_class_zombie_register_dm")
 	register_native("zp_class_zombie_get_id", "native_class_zombie_get_id")
 	register_native("zp_class_zombie_get_name", "native_class_zombie_get_name")
 	register_native("zp_class_zombie_get_real_name", "_class_zombie_get_real_name")
 	register_native("zp_class_zombie_get_desc", "native_class_zombie_get_desc")
 	register_native("zp_class_zombie_get_kb", "native_class_zombie_get_kb")
+	register_native("zp_class_zombie_get_dm", "native_class_zombie_get_dm")
 	register_native("zp_class_zombie_get_count", "native_class_zombie_get_count")
 	register_native("zp_class_zombie_show_menu", "native_class_zombie_show_menu")
 	register_native("zp_class_zombie_menu_text_add", "_class_zombie_menu_text_add")
@@ -146,6 +153,8 @@ public plugin_natives()
 	g_ZombieClassHealth = ArrayCreate(1, 1)
 	g_ZombieClassSpeed = ArrayCreate(1, 1)
 	g_ZombieClassGravity = ArrayCreate(1, 1)
+	g_ZombieClassDMFile = ArrayCreate(1, 1)
+	g_ZombieClassDamageMultiplier = ArrayCreate(1, 1)
 	g_ZombieClassKnockback = ArrayCreate(1, 1)
 	g_ZombieClassKnockbackFile = ArrayCreate(1, 1)
 	g_ZombieClassModelsHandle = ArrayCreate(1, 1)
@@ -578,6 +587,17 @@ public native_class_zombie_register(plugin_id, num_params)
 		amx_save_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "GRAVITY", gravity)
 	ArrayPushCell(g_ZombieClassGravity, gravity)
 	
+	// Damage Multiplier
+	new Float:damage_multiplier = ZOMBIES_DEFAULT_DMULTIPLIER
+	if (!amx_load_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "DAMAGE MULTIPLIER", damage_multiplier))
+	{
+		ArrayPushCell(g_ZombieClassDMFile, false)
+		amx_save_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "DAMAGE MULTIPLIER", damage_multiplier)
+	}
+	else
+		ArrayPushCell(g_ZombieClassDMFile, true)
+	ArrayPushCell(g_ZombieClassDamageMultiplier, damage_multiplier)
+	
 	// Knockback
 	new Float:knockback = ZOMBIES_DEFAULT_KNOCKBACK
 	if (!amx_load_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "KNOCKBACK", knockback))
@@ -701,6 +721,33 @@ public native_class_zombie_register_kb(plugin_id, num_params)
 	return true;
 }
 
+public native_class_zombie_register_dm(plugin_id, num_params)
+{
+	new classid = get_param(1)
+	
+	if (classid < 0 || classid >= g_ZombieClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid zombie class id (%d)", classid)
+		return false;
+	}
+	
+	// Damage multiplier already loaded from file
+	if (ArrayGetCell(g_ZombieClassDMFile, classid))
+		return true;
+	
+	new Float:damage_multiplier = get_param_f(2)
+	
+	// Set zombie class damage multiplier
+	ArraySetCell(g_ZombieClassDamageMultiplier, classid, damage_multiplier)
+	
+	// Save to file
+	new real_name[32]
+	ArrayGetString(g_ZombieClassRealName, classid, real_name, charsmax(real_name))
+	amx_save_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "DAMAGE MULTIPLIER", damage_multiplier)
+	
+	return true;
+}
+
 public native_class_zombie_get_id(plugin_id, num_params)
 {
 	new real_name[32]
@@ -783,8 +830,22 @@ public Float:native_class_zombie_get_kb(plugin_id, num_params)
 		return ZOMBIES_DEFAULT_KNOCKBACK;
 	}
 	
-	// Return zombie class knockback)
+	// Return zombie class damage multiplier
 	return ArrayGetCell(g_ZombieClassKnockback, classid);
+}
+
+public Float:native_class_zombie_get_dm(plugin_id, num_params)
+{
+	new classid = get_param(1)
+	
+	if (classid < 0 || classid >= g_ZombieClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid zombie class id (%d)", classid)
+		return ZOMBIES_DEFAULT_DMULTIPLIER;
+	}
+	
+	// Return zombie class damage multiplier
+	return ArrayGetCell(g_ZombieClassDamageMultiplier, classid);
 }
 
 public native_class_zombie_get_count(plugin_id, num_params)

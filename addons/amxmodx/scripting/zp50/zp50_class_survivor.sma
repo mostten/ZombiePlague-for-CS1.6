@@ -73,6 +73,7 @@ new cvar_survivor_health, cvar_survivor_base_health, cvar_survivor_speed, cvar_s
 new cvar_survivor_glow
 new cvar_survivor_aura, cvar_survivor_aura_color_R, cvar_survivor_aura_color_G, cvar_survivor_aura_color_B
 new cvar_survivor_weapon, cvar_survivor_weapon_block
+new cvar_survivor_damage
 
 public plugin_init()
 {
@@ -84,6 +85,8 @@ public plugin_init()
 	RegisterHam(Ham_Touch, "weapon_shield", "fw_TouchWeapon")
 	RegisterHam(Ham_Killed, "player", "fw_PlayerKilled")
 	RegisterHamBots(Ham_Killed, "fw_PlayerKilled")
+	RegisterHam(Ham_TakeDamage, "player", "fw_TakeDamage")
+	RegisterHamBots(Ham_TakeDamage, "fw_TakeDamage")
 	register_forward(FM_ClientDisconnect, "fw_ClientDisconnect_Post", 1)
 	
 	g_MaxPlayers = get_maxplayers()
@@ -97,6 +100,7 @@ public plugin_init()
 	cvar_survivor_aura_color_R = register_cvar("zp_survivor_aura_color_R", "0")
 	cvar_survivor_aura_color_G = register_cvar("zp_survivor_aura_color_G", "0")
 	cvar_survivor_aura_color_B = register_cvar("zp_survivor_aura_color_B", "150")
+	cvar_survivor_damage = register_cvar("zp_survivor_damage", "1.0")
 	cvar_survivor_weapon = register_cvar("zp_survivor_weapon", "weapon_m249")
 	cvar_survivor_weapon_block = register_cvar("zp_survivor_weapon_block", "1")
 }
@@ -167,6 +171,29 @@ public fw_ClientDisconnect_Post(id)
 {
 	// Reset flags AFTER disconnect (to allow checking if the player was survivor before disconnecting)
 	flag_unset(g_IsSurvivor, id)
+}
+
+// Ham Take Damage Forward
+public fw_TakeDamage(victim, inflictor, attacker, Float:damage, damage_type)
+{
+	// Non-player damage or self damage
+	if (victim == attacker || !is_user_alive(attacker))
+		return HAM_IGNORED;
+	
+	// Survivor attacking human
+	if (flag_get(g_IsSurvivor, attacker) && zp_core_is_zombie(victim))
+	{
+		// Ignore survivor damage override if damage comes from a 3rd party entity
+		// (to prevent this from affecting a sub-plugin's rockets e.g.)
+		if (inflictor == attacker)
+		{
+			// Set survivor damage
+			SetHamParamFloat(4, damage * get_pcvar_float(cvar_survivor_damage))
+			return HAM_HANDLED;
+		}
+	}
+	
+	return HAM_IGNORED;
 }
 
 public clcmd_drop(id)
