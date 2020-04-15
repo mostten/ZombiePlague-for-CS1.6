@@ -33,6 +33,7 @@ new const models_nemesis_claw[][] = { "models/zombie_plague/v_knife_zombie.mdl" 
 
 #define PLAYERMODEL_MAX_LENGTH 32
 #define MODEL_MAX_LENGTH 64
+#define MAXPLAYERS 32
 
 // Custom models
 new Array:g_models_nemesis_player
@@ -54,6 +55,8 @@ new cvar_nemesis_glow
 new cvar_nemesis_aura, cvar_nemesis_aura_color_R, cvar_nemesis_aura_color_G, cvar_nemesis_aura_color_B
 new cvar_nemesis_damage, cvar_nemesis_kill_explode
 new cvar_nemesis_grenade_frost, cvar_nemesis_grenade_fire
+
+new g_MaxHealth[MAXPLAYERS+1]
 
 public plugin_init()
 {
@@ -135,6 +138,7 @@ public plugin_natives()
 	register_native("zp_class_nemesis_get", "native_class_nemesis_get")
 	register_native("zp_class_nemesis_set", "native_class_nemesis_set")
 	register_native("zp_class_nemesis_get_count", "native_class_nemesis_get_count")
+	register_native("zp_class_nemesis_get_maxhealth", "_class_nemesis_get_max_health")
 	
 	set_module_filter("module_filter")
 	set_native_filter("native_filter")
@@ -271,10 +275,8 @@ public zp_fw_core_infect_post(id, attacker)
 		return;
 	
 	// Health
-	if (get_pcvar_num(cvar_nemesis_health) == 0)
-		set_user_health(id, get_pcvar_num(cvar_nemesis_base_health) * GetAliveCount())
-	else
-		set_user_health(id, get_pcvar_num(cvar_nemesis_health))
+	g_MaxHealth[id] = (get_pcvar_num(cvar_nemesis_health) == 0)?(get_pcvar_num(cvar_nemesis_base_health) * GetAliveCount()):(get_pcvar_num(cvar_nemesis_health));
+	set_user_health(id, g_MaxHealth[id])
 	
 	// Gravity
 	set_user_gravity(id, get_pcvar_float(cvar_nemesis_gravity))
@@ -338,6 +340,21 @@ public native_class_nemesis_set(plugin_id, num_params)
 public native_class_nemesis_get_count(plugin_id, num_params)
 {
 	return GetNemesisCount();
+}
+
+public _class_nemesis_get_max_health(plugin_id, num_params)
+{
+	new id = get_param(1);
+	
+	if (!is_user_connected(id))
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", id);
+		return -1;
+	}
+	
+	if (!flag_get(g_IsNemesis, id))
+		g_MaxHealth[id] = -1;
+	return g_MaxHealth[id];
 }
 
 // Nemesis aura task

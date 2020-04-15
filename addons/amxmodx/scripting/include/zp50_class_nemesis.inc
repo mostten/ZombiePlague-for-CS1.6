@@ -37,3 +37,13 @@ native zp_class_nemesis_set(id)
  * @return		Nemesis count.
  */
 native zp_class_nemesis_get_count()
+
+/**
+ * Returns the default maximum health for nemesis.
+ *
+ * Note: does not take into account any kind of HP multipliers.
+ *
+ * @param id		Player index.
+ * @return			Maximum amount of health points, -1 on error.
+ */
+native zp_class_nemesis_get_maxhealth(id)

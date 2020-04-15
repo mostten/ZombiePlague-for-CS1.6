@@ -31,6 +31,7 @@ new Array:g_models_survivor_player
 
 #define PLAYERMODEL_MAX_LENGTH 32
 #define MODEL_MAX_LENGTH 64
+#define MAXPLAYERS 32
 
 new g_models_survivor_weapon[MODEL_MAX_LENGTH] = "models/v_m249.mdl"
 
@@ -66,6 +67,7 @@ new const MAXBPAMMO[] = { -1, 52, -1, 90, 1, 32, 1, 100, 90, 1, 120, 100, 100, 9
 
 new g_MaxPlayers
 new g_IsSurvivor
+new g_MaxHealth[MAXPLAYERS+1]
 
 new cvar_survivor_health, cvar_survivor_base_health, cvar_survivor_speed, cvar_survivor_gravity
 new cvar_survivor_glow
@@ -144,6 +146,7 @@ public plugin_natives()
 	register_native("zp_class_survivor_get", "native_class_survivor_get")
 	register_native("zp_class_survivor_set", "native_class_survivor_set")
 	register_native("zp_class_survivor_get_count", "native_class_survivor_get_count")
+	register_native("zp_class_survivor_get_maxhealth", "_class_survivor_get_max_health")
 }
 
 public client_disconnect(id)
@@ -249,10 +252,8 @@ public zp_fw_core_cure_post(id, attacker)
 		return;
 	
 	// Health
-	if (get_pcvar_num(cvar_survivor_health) == 0)
-		set_user_health(id, get_pcvar_num(cvar_survivor_base_health) * GetAliveCount())
-	else
-		set_user_health(id, get_pcvar_num(cvar_survivor_health))
+	g_MaxHealth[id] = (get_pcvar_num(cvar_survivor_health) == 0)?(get_pcvar_num(cvar_survivor_base_health) * GetAliveCount()):(get_pcvar_num(cvar_survivor_health));
+	set_user_health(id, g_MaxHealth[id]);
 	
 	// Gravity
 	set_user_gravity(id, get_pcvar_float(cvar_survivor_gravity))
@@ -324,6 +325,20 @@ public native_class_survivor_set(plugin_id, num_params)
 public native_class_survivor_get_count(plugin_id, num_params)
 {
 	return GetSurvivorCount();
+}
+
+public _class_survivor_get_max_health(plugin_id, num_params)
+{
+	new id = get_param(1);
+	
+	if (!is_user_connected(id))
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", id);
+		return -1;
+	}
+	if (!flag_get(g_IsSurvivor, id))
+		g_MaxHealth[id] = -1;
+	return g_MaxHealth[id];
 }
 
 // Survivor aura task
