@@ -2,7 +2,7 @@
 
 安装方法:
 
-1.下载安装metamod和amxmodx(链接https://www.amxmodx.org/downloads.php), 版本为1.82或更高, 
+1.下载安装metamod和amxmodx(链接https://www.amxmodx.org/downloads.php), 版本为1.82稳定版或更高, 
 
 详细方法详见https://wiki.alliedmods.net/Installing_AMX_Mod_X_Manually
 
@@ -36,6 +36,10 @@
 
 9.增加每局地图亮度随机, 并伴随雷电
 
+10.新增注册僵尸、人类、恶灵等种类伤害倍数接口
+
+11.新增幸存者伤害倍数指令
+
 新增服务器指令:
 
 1.ghost_mod_flashlight: 是否激活手电筒特效(1打开,0关闭)
@@ -61,6 +65,10 @@
 11.zp_no_engine_knockback_nemesis: 复仇之神禁用引擎自带击退功能,只使用ZP击退功能
 
 12.zp_no_engine_knockback_ghost: 恶灵禁用引擎自带击退功能,只使用ZP击退功能
+
+13.zp_survivor_damage:幸存者攻击目标时的伤害倍数
+
+14.zp_last_man_infection_disable:最后一个人是否禁止感染
 
 新增配置文件:
 
