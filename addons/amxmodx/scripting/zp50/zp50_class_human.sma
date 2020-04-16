@@ -39,7 +39,7 @@ new g_model_vknife_human[MODEL_MAX_LENGTH] = "models/v_knife.mdl"
 #define HUMANS_DEFAULT_HEALTH 100
 #define HUMANS_DEFAULT_SPEED 1.0
 #define HUMANS_DEFAULT_GRAVITY 1.0
-#define HUMANS_DEFAULT_DMULTIPLIER -1.0
+#define HUMANS_DEFAULT_DMULTIPLIER 1.0
 
 // CS Player PData Offsets (win32)
 const OFFSET_CSMENUCODE = 205

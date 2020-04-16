@@ -31,7 +31,7 @@ new const ZP_GHOSTCLASSES_FILE[] = "zp_ghostclasses.ini"
 #define GHOSTS_DEFAULT_HEALTH 1800
 #define GHOSTS_DEFAULT_SPEED 0.75
 #define GHOSTS_DEFAULT_GRAVITY 1.0
-#define GHOSTS_DEFAULT_DMULTIPLIER -1.0
+#define GHOSTS_DEFAULT_DMULTIPLIER 1.0
 #define GHOSTS_DEFAULT_MODEL "zombie"
 #define GHOSTS_DEFAULT_CLAWMODEL "models/zombie_plague/zp_ghost/v_knife_ghost.mdl"
 #define GHOSTS_DEFAULT_KNOCKBACK 1.0
