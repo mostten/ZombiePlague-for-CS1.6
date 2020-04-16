@@ -10,6 +10,8 @@
 
 3.将amxmodx/configs/plugins-zp50_ammopacks.ini文件重命名为plugins.ini(请自行备份原plugins.ini文件)
 
+4.编译所有sma源码，编译完成后将插件移动至plugins文件夹下
+
 注: 如果服务器已经安装ZP5.0.8插件, 则不需要重新覆盖ZP自带配置文件(除plugins-zp50_ammopacks.ini与disabled-zp50_money.ini外, 相同名称配置文件可跳过, 只是配置文件可跳过!!!), 因为本次升级重新编写了多个原始ZP插件, 所以插件同名需要覆盖安装!!!.
 
 版本: v5.0.8 with update 1
