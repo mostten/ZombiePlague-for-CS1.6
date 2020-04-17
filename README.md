@@ -10,7 +10,9 @@ linux:找到gamedll_linux "dlls/mp_i386.so", 将其整行替换为gamedll_linux 
 
 保存文件（请自行备份源文件）, 安装metamod完成。
 
-metamod下载链接https://github.com/mostten/ZombiePlague-for-CS1.6/releases/download/v1.21.1/metamod-1.21.1-am.zip
+metamod下载链接:
+
+https://github.com/mostten/ZombiePlague-for-CS1.6/releases/download/v1.21.1/metamod-1.21.1-am.zip
 
 2.下载安装amxmodx(版本需要大于等于v1.8.2稳定版): 将下载好的amxmodx解压至你的cstrike下（最终目录结构为cstrike/addons/amxmodx）, 编辑cstrike/addons/metamod/plugins.ini
 
