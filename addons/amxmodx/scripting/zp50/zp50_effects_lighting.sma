@@ -20,7 +20,7 @@ new const ZP_SETTINGS_FILE[] = "zombieplague.ini"
 // Defaults
 new const sky_names[][] = { "space" }
 new const thunder_lights[][] = { "ijklmnonmlkjihgfedcb" , "klmlkjihgfedcbaabcdedcb" , "bcdefedcijklmlkjihgfedcb" }
-new const map_lights[][] = { "a" , "b", "c" , "" , "d" }
+new const map_lights[][] = { "b", "c" , "" , "d" }
 new const sound_thunder[][] = { "zombie_plague/thunder1.wav" , "zombie_plague/thunder2.wav" }
 
 #define SOUND_MAX_LENGTH 64
@@ -361,5 +361,7 @@ get_light_level(light[LIGHT_MAX_LENGTH])
 		return 25;
 	else if(tolower(light[0]) == 'z')
 		return 26;
+	else if(equal(light, ""))
+		return 27;
 	return 0;
 }
