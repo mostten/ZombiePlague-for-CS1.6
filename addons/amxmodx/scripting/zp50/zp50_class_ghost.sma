@@ -952,29 +952,34 @@ public native_class_ghost_get(plugin_id, num_params)
 
 public native_class_ghost_set(plugin_id, num_params)
 {
-	new id = get_param(1)
+	new id = get_param(1);
 	
 	if (!is_user_alive(id))
 	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Ghost Invalid Player (%d)", id)
+		log_error(AMX_ERR_NATIVE, "[ZP] Ghost Invalid Player (%d)", id);
 		return false;
 	}
 	
 	if (flag_get(g_IsGhost, id))
 	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Player already a ghost (%d)", id)
+		log_error(AMX_ERR_NATIVE, "[ZP] Player already a ghost (%d)", id);
 		return false;
 	}
 	
-	new attacker = get_param(2)
+	new attacker = get_param(2);
 	
 	if (attacker && !is_user_connected(attacker))
 	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Ghost Invalid Player (%d)", attacker)
+		log_error(AMX_ERR_NATIVE, "[ZP] Ghost Invalid Player (%d)", attacker);
 		return false;
 	}
-	flag_set(g_IsGhost, id)
-	return zp_core_infect(id, attacker)
+	
+	flag_set(g_IsGhost, id);
+	
+	if(zp_core_is_zombie(id))
+		return zp_core_force_infect(id)
+	
+	return zp_core_infect(id, attacker);
 }
 
 public _class_ghost_get_alive_count(plugin_id, num_params)
