@@ -314,7 +314,7 @@ public event_game_restart()
 	g_GameRestarting = true
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	// Clear saved money after disconnecting
 	g_MoneyAtRoundStart[id] = NO_DATA

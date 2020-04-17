@@ -88,7 +88,7 @@ public client_putinserver(id)
 	g_AmmoPacks[id] = get_pcvar_num(cvar_starting_ammo_packs)
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	remove_task(id+TASK_HIDEMONEY)
 }

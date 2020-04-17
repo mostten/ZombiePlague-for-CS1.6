@@ -200,7 +200,7 @@ public client_putinserver(client)
 	}
 }
 
-public client_disconnect(client)
+public client_disconnected(client)
 {
 	del_bitsum(bs_IsAlive, client);
 	del_bitsum(bs_IsBot, client);

@@ -120,7 +120,7 @@ respawn_player_manually(id)
 	ExecuteHamB(Ham_CS_RoundRespawn, id)
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	// Remove tasks on disconnect
 	remove_task(id+TASK_RESPAWN)

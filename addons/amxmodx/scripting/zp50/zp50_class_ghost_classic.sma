@@ -14,7 +14,6 @@
 #include <fakemeta>
 #include <hamsandwich>
 #include <xs>
-#include <maths>
 #include <cs_ham_bots_api>
 #include <zp50_class_ghost>
 #include <zp50_colorchat>
@@ -394,4 +393,14 @@ public checkstuck()
 			}
 		}
 	}
+}
+
+Float:acos(Float:value)
+{
+	return floatacos(value, radian);
+}
+
+Float:asin(Float:value)
+{
+	return floatasin(value, radian);
 }

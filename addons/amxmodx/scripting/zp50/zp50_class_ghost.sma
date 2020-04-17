@@ -200,7 +200,7 @@ public client_putinserver(id)
 	g_GhostClassNext[id] = ZP_INVALID_GHOST_CLASS
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	// 重置菜单页
 	MENU_PAGE_CLASS = 0

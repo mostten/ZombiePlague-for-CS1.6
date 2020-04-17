@@ -946,7 +946,7 @@ public fw_PlayerSpawn(id)
 		set_task(ZP_STEP_DELAY, "zombie_step_sounds", id+TASK_STEP_SOUNDS, _, _, "b");
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	// Remove idle sounds task
 	remove_task(id+TASK_IDLE_SOUNDS);

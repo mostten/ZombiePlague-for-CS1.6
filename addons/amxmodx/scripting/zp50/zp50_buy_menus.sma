@@ -231,7 +231,7 @@ public clcmd_buy(id)
 	show_available_buy_menus(id)
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	WPN_AUTO_ON = 0
 	WPN_STARTID = 0

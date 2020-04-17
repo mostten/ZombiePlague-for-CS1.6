@@ -149,7 +149,7 @@ public client_putinserver(id)
 	g_HumanClassNext[id] = ZP_INVALID_HUMAN_CLASS
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	// Reset remembered menu pages
 	MENU_PAGE_CLASS = 0

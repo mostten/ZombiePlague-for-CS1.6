@@ -187,7 +187,7 @@ public client_putinserver(id)
 	g_ZombieClassNext[id] = ZP_INVALID_ZOMBIE_CLASS
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	// Reset remembered menu pages
 	MENU_PAGE_CLASS = 0

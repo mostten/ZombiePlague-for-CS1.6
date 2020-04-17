@@ -274,7 +274,7 @@ public zp_fw_core_infect_post(id, attacker)
 	}
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	flag_unset(g_IsFrozen, id)
 	remove_task(id+TASK_FROST_REMOVE)

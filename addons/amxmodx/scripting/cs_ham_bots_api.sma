@@ -150,7 +150,7 @@ public native_enable_ham_forward_bots(plugin_id, num_params)
 	return true;
 }
 
-public client_disconnect(id_leaving)
+public client_disconnected(id_leaving)
 {
 	// Our CZ Bot used for registering hooks is leaving
 	if (id_leaving == g_CZBotPlayerID)

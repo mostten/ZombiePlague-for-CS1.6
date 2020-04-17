@@ -261,7 +261,7 @@ respawn_player_manually(id)
 }
 
 // Client Disconnecting (prevent Game Commencing bug after last player on a team leaves)
-public client_disconnect(leaving_player)
+public client_disconnected(leaving_player)
 {
 	// Remove respawn task on disconnect
 	remove_task(leaving_player+TASK_RESPAWN)

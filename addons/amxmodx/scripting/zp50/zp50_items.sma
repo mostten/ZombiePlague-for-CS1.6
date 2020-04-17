@@ -224,7 +224,7 @@ public native_items_menu_text_add(plugin_id, num_params)
 	format(g_AdditionalMenuText, charsmax(g_AdditionalMenuText), "%s%s", g_AdditionalMenuText, text)
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	// Reset remembered menu pages
 	MENU_PAGE_ITEMS = 0

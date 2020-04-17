@@ -309,7 +309,7 @@ public spectator_nightvision(id)
 		DisableNightVision(id)
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	// Reset nightvision flags
 	flag_unset(g_NightVisionActive, id)

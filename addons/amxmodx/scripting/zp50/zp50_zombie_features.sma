@@ -105,7 +105,7 @@ public fw_PlayerKilled(victim, attacker, shouldgib)
 	remove_task(victim+TASK_BLOOD)
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	// Remove bleeding task
 	remove_task(id+TASK_BLOOD)

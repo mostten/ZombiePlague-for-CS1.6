@@ -134,7 +134,7 @@ public native_get_player_weap_restrict(plugin_id, num_params)
 	return true;
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	flag_unset(g_HasWeaponRestrictions, id)
 }

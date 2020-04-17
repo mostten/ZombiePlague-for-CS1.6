@@ -80,7 +80,7 @@ public event_round_start()
 		remove_task(id+TASK_TEAMMSG)
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	remove_task(id+TASK_TEAMMSG)
 }

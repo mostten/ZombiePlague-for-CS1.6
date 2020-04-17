@@ -124,7 +124,7 @@ public remove_spawn_protection(taskid)
 	flag_unset(g_SpawnProtectBlockDamage, ID_SPAWNPROTECT)
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	// Remove tasks on disconnect
 	remove_task(id+TASK_SPAWNPROTECT)

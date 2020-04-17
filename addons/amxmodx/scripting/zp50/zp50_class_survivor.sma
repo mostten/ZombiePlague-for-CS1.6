@@ -153,7 +153,7 @@ public plugin_natives()
 	register_native("zp_class_survivor_get_maxhealth", "_class_survivor_get_max_health")
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	if (flag_get(g_IsSurvivor, id))
 	{

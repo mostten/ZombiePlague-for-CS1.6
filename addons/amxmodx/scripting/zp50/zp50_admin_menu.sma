@@ -137,7 +137,7 @@ public native_admin_menu_show(plugin_id, num_params)
 	return true;
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	// Reset remembered menu pages
 	MENU_PAGE_GAME_MODES = 0

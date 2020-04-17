@@ -104,7 +104,7 @@ public native_reset_player_maxspeed(plugin_id, num_params)
 	return true;
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	flag_unset(g_HasCustomMaxSpeed, id)
 }

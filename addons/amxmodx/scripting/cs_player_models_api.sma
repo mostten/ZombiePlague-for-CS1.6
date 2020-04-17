@@ -141,7 +141,7 @@ public native_reset_player_model(plugin_id, num_params)
 	return true;
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	remove_task(id+TASK_MODELCHANGE)
 	flag_unset(g_HasCustomModel, id)

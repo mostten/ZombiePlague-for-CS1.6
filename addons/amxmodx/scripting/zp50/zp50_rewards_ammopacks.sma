@@ -225,7 +225,7 @@ public zp_fw_gamemodes_end()
 	}
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
 	// Clear damage after disconnecting
 	g_DamageDealtToZombies[id] = 0.0
