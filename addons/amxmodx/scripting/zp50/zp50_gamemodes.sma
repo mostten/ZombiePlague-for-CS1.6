@@ -547,6 +547,7 @@ public fw_TakeDamage(victim, inflictor, attacker, Float:damage, damage_type)
 			case AttackType_Secondary:{damage_new = zp_get_secondary_damage(zp_class_ghost_get_current(attacker));}
 			default:{damage_new = get_user_damage_math(attacker, ClassTeam_Ghost, damage);}
 		}
+		g_AttackType[attacker] = AttackType_Other;
 		damage_changed = damage_new != damage && damage_new > 0.0;
 		
 		if(damage_changed)
