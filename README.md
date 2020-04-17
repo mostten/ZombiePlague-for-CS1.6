@@ -2,7 +2,7 @@
 
 安装方法:
 
-1.下载安装metamod:将下载好的metamod解压至你的cstrike下（最终目录结构为cstrike/addons）, 编辑cstrike文件夹下使用记事本软件liblist.gam文件, 
+1.下载安装metamod:将下载好的metamod解压至你的cstrike下（最终目录结构为cstrike/addons）, 使用记事本软件编辑cstrike文件夹下liblist.gam文件, 
 
 windows:找到gamedll "dlls\mp.dll"行, 将其整行替换为gamedll "addons\metamod\dlls\metamod.dll"
 
