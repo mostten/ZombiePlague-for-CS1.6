@@ -18,6 +18,7 @@
 #include <cs_teams_api>
 #include <cs_ham_bots_api>
 #include <zp50_core>
+#include <zp50_class_human>
 #include <zp50_gamemodes_const>
 #define LIBRARY_NEMESIS "zp50_class_nemesis"
 #include <zp50_class_nemesis>
@@ -566,15 +567,6 @@ public fw_TakeDamage(victim, inflictor, attacker, Float:damage, damage_type)
 			zp_class_ghost_set(victim, attacker)
 			return HAM_SUPERCEDE;
 		}
-		return damage_changed?HAM_HANDLED:HAM_IGNORED;
-	}
-	
-	// 人类攻击僵尸...
-	if (!zp_core_is_zombie(attacker) && zp_core_is_zombie(victim))
-	{
-		damage_changed = reset_user_damage(attacker, ClassTeam_Human, damage);
-		if(damage_changed)
-			SetHamParamFloat(4, damage);
 		return damage_changed?HAM_HANDLED:HAM_IGNORED;
 	}
 	
