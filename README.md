@@ -4,9 +4,9 @@
 
 1.下载安装metamod:将下载好的metamod解压至你的cstrike下（最终目录结构为cstrike/addons）, 使用记事本软件编辑cstrike文件夹下liblist.gam文件, 
 
-windows:找到gamedll "dlls\mp.dll"行, 将其整行替换为gamedll "addons\metamod\dlls\metamod.dll"
+windows: 找到gamedll "dlls\mp.dll"行, 将其整行替换为gamedll "addons\metamod\dlls\metamod.dll"
 
-linux:找到gamedll_linux "dlls/mp_i386.so", 将其整行替换为gamedll_linux "addons/metamod/dlls/metamod_i386.so", 如果是服务器则将其整行替换为gamedll_linux "addons/metamod/dlls/metamod.so"
+linux: 找到gamedll_linux "dlls/mp_i386.so", 将其整行替换为gamedll_linux "addons/metamod/dlls/metamod_i386.so", 如果是服务器则将其整行替换为gamedll_linux "addons/metamod/dlls/metamod.so"
 
 保存文件（请自行备份源文件）, 安装metamod完成。
 
