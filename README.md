@@ -23,6 +23,7 @@ linux: 新增一行linux addons/amxmodx/dlls/amxmodx_mm_i386.so
 amxmodx下载链接:
 
 windows: https://github.com/mostten/ZombiePlague-for-CS1.6/releases/download/v1.8.2/amxmodx-1.8.2-base-windows.zip
+
 linux: https://github.com/mostten/ZombiePlague-for-CS1.6/releases/download/v1.8.2/amxmodx-1.8.2-base-linux.tar.gz
 
 3.下载安装Counter-Strike Addon, 将下载的文件解压覆盖至cstrike/addons文件夹, 完成安装。
@@ -30,6 +31,7 @@ linux: https://github.com/mostten/ZombiePlague-for-CS1.6/releases/download/v1.8.
 下载链接: 
 
 windows: https://github.com/mostten/ZombiePlague-for-CS1.6/releases/download/V1.8.2/amxmodx-1.8.2-cstrike-windows.zip
+
 linux: https://github.com/mostten/ZombiePlague-for-CS1.6/releases/download/V1.8.2/amxmodx-1.8.2-cstrike-linux.tar.gz
 
 4.下载本插件全部内容并覆盖至你的游戏文件夹cstrike下;
