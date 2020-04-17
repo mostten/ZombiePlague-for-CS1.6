@@ -1,6 +1,6 @@
 适用于CS1.6版本的僵尸瘟疫插件ZombiePlague(僵尸感染&恶灵模式):
 
-[安装方法](https://github.com/mostten/ZombiePlague-for-CS1.6/wiki/%E5%AE%89%E8%A3%85%E6%96%B9%E6%B3%95)
+[点击查看安装方法](https://github.com/mostten/ZombiePlague-for-CS1.6/wiki/%E5%AE%89%E8%A3%85%E6%96%B9%E6%B3%95)
 
 版本: v5.0.8 with update 1
 
