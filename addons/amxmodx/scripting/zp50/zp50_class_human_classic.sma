@@ -11,6 +11,7 @@
 
 #include <amxmodx>
 #include <zp50_class_human>
+#include <zp50_radio>
 
 // Classic Human Attributes
 new const humanclass1_name[] = "Classic Human"
@@ -30,4 +31,10 @@ public plugin_precache()
 	new index
 	for (index = 0; index < sizeof humanclass1_models; index++)
 		zp_class_human_register_model(g_HumanClassID, humanclass1_models[index])
+	
+	// 注册无线电音频
+	//zp_radio_reg_human("test name", false, "hello test", false, "zombie_plague/zombie_pain1.wav", RadioMenu_1, g_HumanClassID);
+	
+	// 替换原版手雷无线电
+	//zp_radio_replace_human(RADIO_FIREINHOLE, "zombie_plague/zombie_pain1.wav", g_HumanClassID);
 }
