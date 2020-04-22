@@ -551,7 +551,7 @@ StrContains(const str[], const substr[], bool:caseSensitive = true)
 {
 	new strSize = strlen(str) + 1;
 	new substrSize = strlen(substr) + 1;
-	if(strSize < 1 || substrSize < 1 || substrSize > strSize)
+	if(strSize < 2 || substrSize < 2 || substrSize > strSize)
 		return -1;
 	
 	for(new i = 0; i < strSize; i++)
