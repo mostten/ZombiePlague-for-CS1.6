@@ -99,47 +99,25 @@ public plugin_precache()
 sounds_precache()
 {
 	// Ghost sounds
-	new Array:ghost_pain = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_die = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_fall = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_miss_slash = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_miss_wall = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_hit_normal = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_hit_stab = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_idle = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_idle_last = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	
 	new index;
 	for (index = 0; index < sizeof sound_ghost_pain; index++)
-		ArrayPushString(ghost_pain, sound_ghost_pain[index])
+		zp_ghost_register_sound(g_GhostClassID, sound_ghost_pain[index]);
 	for (index = 0; index < sizeof sound_ghost_die; index++)
-		ArrayPushString(ghost_die, sound_ghost_die[index])
+		zp_ghost_register_sound(g_GhostClassID, _, sound_ghost_die[index]);
 	for (index = 0; index < sizeof sound_ghost_fall; index++)
-		ArrayPushString(ghost_fall, sound_ghost_fall[index])
+		zp_ghost_register_sound(g_GhostClassID, _, _, sound_ghost_fall[index]);
 	for (index = 0; index < sizeof sound_ghost_miss_slash; index++)
-		ArrayPushString(ghost_miss_slash, sound_ghost_miss_slash[index])
+		zp_ghost_register_sound(g_GhostClassID, _, _, _, sound_ghost_miss_slash[index]);
 	for (index = 0; index < sizeof sound_ghost_miss_wall; index++)
-		ArrayPushString(ghost_miss_wall, sound_ghost_miss_wall[index])
+		zp_ghost_register_sound(g_GhostClassID, _, _, _, _, sound_ghost_miss_wall[index]);
 	for (index = 0; index < sizeof sound_ghost_hit_normal; index++)
-		ArrayPushString(ghost_hit_normal, sound_ghost_hit_normal[index])
+		zp_ghost_register_sound(g_GhostClassID, _, _, _, _, _, sound_ghost_hit_normal[index]);
 	for (index = 0; index < sizeof sound_ghost_hit_stab; index++)
-		ArrayPushString(ghost_hit_stab, sound_ghost_hit_stab[index])
+		zp_ghost_register_sound(g_GhostClassID, _, _, _, _, _, _, sound_ghost_hit_stab[index]);
 	for (index = 0; index < sizeof sound_ghost_idle; index++)
-		ArrayPushString(ghost_idle, sound_ghost_idle[index])
+		zp_ghost_register_sound(g_GhostClassID, _, _, _, _, _, _, _, sound_ghost_idle[index]);
 	for (index = 0; index < sizeof sound_ghost_idle_last; index++)
-		ArrayPushString(ghost_idle_last, sound_ghost_idle_last[index])
-	
-	zp_ghost_sound_register(g_GhostClassID, ghost_pain, ghost_die, ghost_fall, ghost_miss_slash, ghost_miss_wall, ghost_hit_normal, ghost_hit_stab, ghost_idle, ghost_idle_last);
-	
-	ArrayDestroy(ghost_pain);
-	ArrayDestroy(ghost_die);
-	ArrayDestroy(ghost_fall);
-	ArrayDestroy(ghost_miss_slash);
-	ArrayDestroy(ghost_miss_wall);
-	ArrayDestroy(ghost_hit_normal);
-	ArrayDestroy(ghost_hit_stab);
-	ArrayDestroy(ghost_idle);
-	ArrayDestroy(ghost_idle_last);
+		zp_ghost_register_sound(g_GhostClassID, _, _, _, _, _, _, _, _, sound_ghost_idle_last[index]);
 }
 
 // Ham Player Spawn Post Forward

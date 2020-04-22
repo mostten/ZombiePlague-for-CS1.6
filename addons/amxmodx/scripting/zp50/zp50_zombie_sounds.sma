@@ -129,11 +129,11 @@ public plugin_precache()
 public plugin_natives()
 {
 	register_library("zp50_zombie_sounds");
-	register_native("zp_zombie_sound_register", "native_zombie_sound_register");
-	register_native("zp_ghost_sound_register", "native_ghost_sound_register");
-	register_native("zp_human_sound_register", "native_human_sound_register");
-	register_native("zp_survivor_sound_register", "native_survivor_sound_register");
-	register_native("zp_nemesis_sound_register", "native_nemesis_sound_register");
+	register_native("zp_zombie_register_sound", "native_zombie_register_sound");
+	register_native("zp_ghost_register_sound", "native_ghost_register_sound");
+	register_native("zp_human_register_sound", "native_human_register_sound");
+	register_native("zp_survivor_register_sound", "native_survivor_register_sound");
+	register_native("zp_nemesis_register_sound", "native_nemesis_register_sound");
 	
 	set_module_filter("module_filter");
 	set_native_filter("native_filter");
@@ -510,191 +510,166 @@ zombie_precache()
 	ArrayDestroy(sound_idle_last);
 }
 
-public native_zombie_sound_register(plugin_id, num_params)
+public native_zombie_register_sound(plugin_id, num_params)
 {
-	new zombie_class = get_param(1);
-	new Array:sound_pain = Array:get_param(2);
-	new Array:sound_die = Array:get_param(3);
-	new Array:sound_fall = Array:get_param(4);
-	new Array:sound_miss_slash = Array:get_param(5);
-	new Array:sound_miss_wall = Array:get_param(6);
-	new Array:sound_hit_normal = Array:get_param(7);
-	new Array:sound_hit_stab = Array:get_param(8);
-	new Array:sound_idle = Array:get_param(9);
-	new Array:sound_idle_last = Array:get_param(10);
-	new Array:sound_head_shot = Array:get_param(11);
-	new Array:sound_step = Array:get_param(12);
+	new classid = get_param(1);
+	new pain[SOUND_MAX_LENGTH];
+	new die[SOUND_MAX_LENGTH];
+	new fall[SOUND_MAX_LENGTH];
+	new miss_slash[SOUND_MAX_LENGTH];
+	new miss_wall[SOUND_MAX_LENGTH];
+	new hit_normal[SOUND_MAX_LENGTH];
+	new hit_stab[SOUND_MAX_LENGTH];
+	new idle[SOUND_MAX_LENGTH];
+	new idle_last[SOUND_MAX_LENGTH];
+	new head_shot[SOUND_MAX_LENGTH];
+	new step[SOUND_MAX_LENGTH];
 	
-	RegSoundArray(zombie_class, SoundTeam_Zombie, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last, sound_head_shot, sound_step);
-}
-
-public native_ghost_sound_register(plugin_id, num_params)
-{
-	new ghost_class = get_param(1);
-	new Array:sound_pain = Array:get_param(2);
-	new Array:sound_die = Array:get_param(3);
-	new Array:sound_fall = Array:get_param(4);
-	new Array:sound_miss_slash = Array:get_param(5);
-	new Array:sound_miss_wall = Array:get_param(6);
-	new Array:sound_hit_normal = Array:get_param(7);
-	new Array:sound_hit_stab = Array:get_param(8);
-	new Array:sound_idle = Array:get_param(9);
-	new Array:sound_idle_last = Array:get_param(10);
-	new Array:sound_head_shot = Array:get_param(11);
-	new Array:sound_step = Array:get_param(12);
+	get_string(2, pain, charsmax(pain));
+	get_string(3, die, charsmax(die));
+	get_string(4, fall, charsmax(fall));
+	get_string(5, miss_slash, charsmax(miss_slash));
+	get_string(6, miss_wall, charsmax(miss_wall));
+	get_string(7, hit_normal, charsmax(hit_normal));
+	get_string(8, hit_stab, charsmax(hit_stab));
+	get_string(9, idle, charsmax(idle));
+	get_string(10, idle_last, charsmax(idle_last));
+	get_string(11, head_shot, charsmax(head_shot));
+	get_string(12, step, charsmax(step));
 	
-	RegSoundArray(ghost_class, SoundTeam_Ghost, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last, sound_head_shot, sound_step);
+	RegSounds(classid, SoundTeam_Ghost, pain, die, fall, miss_slash, miss_wall, hit_normal, hit_stab, idle, idle_last, head_shot, step);
 }
 
-public native_human_sound_register(plugin_id, num_params)
+public native_ghost_register_sound(plugin_id, num_params)
 {
-	new human_class = get_param(1);
-	new Array:sound_pain = Array:get_param(2);
-	new Array:sound_die = Array:get_param(3);
-	new Array:sound_fall = Array:get_param(4);
-	new Array:sound_miss_slash = Array:get_param(5);
-	new Array:sound_miss_wall = Array:get_param(6);
-	new Array:sound_hit_normal = Array:get_param(7);
-	new Array:sound_hit_stab = Array:get_param(8);
-	new Array:sound_idle = Invalid_Array;
-	new Array:sound_idle_last = Invalid_Array;
-	new Array:sound_head_shot = Array:get_param(9);
-	new Array:sound_step = Array:get_param(10);
+	new classid = get_param(1);
+	new pain[SOUND_MAX_LENGTH];
+	new die[SOUND_MAX_LENGTH];
+	new fall[SOUND_MAX_LENGTH];
+	new miss_slash[SOUND_MAX_LENGTH];
+	new miss_wall[SOUND_MAX_LENGTH];
+	new hit_normal[SOUND_MAX_LENGTH];
+	new hit_stab[SOUND_MAX_LENGTH];
+	new idle[SOUND_MAX_LENGTH];
+	new idle_last[SOUND_MAX_LENGTH];
+	new head_shot[SOUND_MAX_LENGTH];
+	new step[SOUND_MAX_LENGTH];
 	
-	RegSoundArray(human_class, SoundTeam_Human, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last, sound_head_shot, sound_step);
-}
-
-public native_survivor_sound_register(plugin_id, num_params)
-{
-	new survivor_class = 0;
-	new Array:sound_pain = Array:get_param(1);
-	new Array:sound_die = Array:get_param(2);
-	new Array:sound_fall = Array:get_param(3);
-	new Array:sound_miss_slash = Array:get_param(4);
-	new Array:sound_miss_wall = Array:get_param(5);
-	new Array:sound_hit_normal = Array:get_param(6);
-	new Array:sound_hit_stab = Array:get_param(7);
-	new Array:sound_idle = Invalid_Array;
-	new Array:sound_idle_last = Invalid_Array;
-	new Array:sound_head_shot = Array:get_param(8);
-	new Array:sound_step = Array:get_param(9);
+	get_string(2, pain, charsmax(pain));
+	get_string(3, die, charsmax(die));
+	get_string(4, fall, charsmax(fall));
+	get_string(5, miss_slash, charsmax(miss_slash));
+	get_string(6, miss_wall, charsmax(miss_wall));
+	get_string(7, hit_normal, charsmax(hit_normal));
+	get_string(8, hit_stab, charsmax(hit_stab));
+	get_string(9, idle, charsmax(idle));
+	get_string(10, idle_last, charsmax(idle_last));
+	get_string(11, head_shot, charsmax(head_shot));
+	get_string(12, step, charsmax(step));
 	
-	RegSoundArray(survivor_class, SoundTeam_Survivor, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last, sound_head_shot, sound_step);
+	RegSounds(classid, SoundTeam_Ghost, pain, die, fall, miss_slash, miss_wall, hit_normal, hit_stab, idle, idle_last, head_shot, step);
+
 }
 
-public native_nemesis_sound_register(plugin_id, num_params)
+public native_human_register_sound(plugin_id, num_params)
 {
-	new nemesis_class = 0;
-	new Array:sound_pain = Array:get_param(1);
-	new Array:sound_die = Array:get_param(2);
-	new Array:sound_fall = Array:get_param(3);
-	new Array:sound_miss_slash = Array:get_param(4);
-	new Array:sound_miss_wall = Array:get_param(5);
-	new Array:sound_hit_normal = Array:get_param(6);
-	new Array:sound_hit_stab = Array:get_param(7);
-	new Array:sound_idle = Array:get_param(8);
-	new Array:sound_idle_last = Array:get_param(9);
-	new Array:sound_head_shot = Array:get_param(10);
-	new Array:sound_step = Array:get_param(11);
+	new classid = get_param(1);
+	new pain[SOUND_MAX_LENGTH];
+	new die[SOUND_MAX_LENGTH];
+	new fall[SOUND_MAX_LENGTH];
+	new miss_slash[SOUND_MAX_LENGTH];
+	new miss_wall[SOUND_MAX_LENGTH];
+	new hit_normal[SOUND_MAX_LENGTH];
+	new hit_stab[SOUND_MAX_LENGTH];
+	new head_shot[SOUND_MAX_LENGTH];
+	new step[SOUND_MAX_LENGTH];
 	
-	RegSoundArray(nemesis_class, SoundTeam_Nemesis, sound_pain, sound_die, sound_fall, sound_miss_slash, sound_miss_wall, sound_hit_normal, sound_hit_stab, sound_idle, sound_idle_last, sound_head_shot, sound_step);
+	get_string(2, pain, charsmax(pain));
+	get_string(3, die, charsmax(die));
+	get_string(4, fall, charsmax(fall));
+	get_string(5, miss_slash, charsmax(miss_slash));
+	get_string(6, miss_wall, charsmax(miss_wall));
+	get_string(7, hit_normal, charsmax(hit_normal));
+	get_string(8, hit_stab, charsmax(hit_stab));
+	get_string(9, head_shot, charsmax(head_shot));
+	get_string(10, step, charsmax(step));
+	
+	RegSounds(classid, SoundTeam_Human, pain, die, fall, miss_slash, miss_wall, hit_normal, hit_stab, "", "", head_shot, step);
 }
 
-RegSoundArray(team_class, SoundTeam:sound_team, &Array:sound_pain = Invalid_Array, &Array:sound_die = Invalid_Array, &Array:sound_fall = Invalid_Array, &Array:sound_miss_slash = Invalid_Array, &Array:sound_miss_wall = Invalid_Array, &Array:sound_hit_normal = Invalid_Array, &Array:sound_hit_stab = Invalid_Array, &Array:sound_idle = Invalid_Array, &Array:sound_idle_last = Invalid_Array, &Array:sound_head_shot = Invalid_Array, &Array:sound_step = Invalid_Array)
+public native_survivor_register_sound(plugin_id, num_params)
 {
-	new index;
-	new sound[SOUND_MAX_LENGTH];
-	if(sound_pain != Invalid_Array)
-	{
-		for (index = 0; index < ArraySize(sound_pain); index++)
-		{
-			ArrayGetString(sound_pain, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, sound_team, SoundType_Pain, team_class);
-		}
-	}
-	if(sound_die != Invalid_Array)
-	{
-		for (index = 0; index < ArraySize(sound_die); index++)
-		{
-			ArrayGetString(sound_die, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, sound_team, SoundType_Die, team_class);
-		}
-	}
-	if(sound_fall != Invalid_Array)
-	{
-		for (index = 0; index < ArraySize(sound_fall); index++)
-		{
-			ArrayGetString(sound_fall, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, sound_team, SoundType_Fall, team_class);
-		}
-	}
-	if(sound_miss_slash != Invalid_Array)
-	{
-		for (index = 0; index < ArraySize(sound_miss_slash); index++)
-		{
-			ArrayGetString(sound_miss_slash, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, sound_team, SoundType_MissSlash, team_class);
-		}
-	}
-	if(sound_miss_wall != Invalid_Array)
-	{
-		for (index = 0; index < ArraySize(sound_miss_wall); index++)
-		{
-			ArrayGetString(sound_miss_wall, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, sound_team, SoundType_MissWall, team_class);
-		}
-	}
-	if(sound_hit_normal != Invalid_Array)
-	{
-		for (index = 0; index < ArraySize(sound_hit_normal); index++)
-		{
-			ArrayGetString(sound_hit_normal, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, sound_team, SoundType_HitNormal, team_class);
-		}
-	}
-	if(sound_hit_stab != Invalid_Array)
-	{
-		for (index = 0; index < ArraySize(sound_hit_stab); index++)
-		{
-			ArrayGetString(sound_hit_stab, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, sound_team, SoundType_HitStab, team_class);
-		}
-	}
-	if(sound_idle != Invalid_Array)
-	{
-		for (index = 0; index < ArraySize(sound_idle); index++)
-		{
-			ArrayGetString(sound_idle, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, sound_team, SoundType_Idle, team_class);
-		}
-	}
-	if(sound_idle_last != Invalid_Array)
-	{
-		for (index = 0; index < ArraySize(sound_idle_last); index++)
-		{
-			ArrayGetString(sound_idle_last, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, sound_team, SoundType_IdleLast, team_class);
-		}
-	}
-	if(sound_head_shot != Invalid_Array)
-	{
-		for (index = 0; index < ArraySize(sound_head_shot); index++)
-		{
-			ArrayGetString(sound_head_shot, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, sound_team, SoundType_HeadShot, team_class);
-		}
-	}
-	if(sound_step != Invalid_Array)
-	{
-		for (index = 0; index < ArraySize(sound_step); index++)
-		{
-			ArrayGetString(sound_step, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, sound_team, SoundType_Step, team_class);
-		}
-	}
+	new classid = 0;
+	new pain[SOUND_MAX_LENGTH];
+	new die[SOUND_MAX_LENGTH];
+	new fall[SOUND_MAX_LENGTH];
+	new miss_slash[SOUND_MAX_LENGTH];
+	new miss_wall[SOUND_MAX_LENGTH];
+	new hit_normal[SOUND_MAX_LENGTH];
+	new hit_stab[SOUND_MAX_LENGTH];
+	new head_shot[SOUND_MAX_LENGTH];
+	new step[SOUND_MAX_LENGTH];
+	
+	get_string(1, pain, charsmax(pain));
+	get_string(2, die, charsmax(die));
+	get_string(3, fall, charsmax(fall));
+	get_string(4, miss_slash, charsmax(miss_slash));
+	get_string(5, miss_wall, charsmax(miss_wall));
+	get_string(6, hit_normal, charsmax(hit_normal));
+	get_string(7, hit_stab, charsmax(hit_stab));
+	get_string(8, head_shot, charsmax(head_shot));
+	get_string(9, step, charsmax(step));
+	
+	RegSounds(classid, SoundTeam_Survivor, pain, die, fall, miss_slash, miss_wall, hit_normal, hit_stab, "", "", head_shot, step);
+
 }
 
-AddSoundFileArray(sound[], SoundTeam:sound_team, SoundType:sound_type, team_class = ZP_INVALID_TEAM_CLASS)
+public native_nemesis_register_sound(plugin_id, num_params)
+{
+	new classid = 0;
+	new pain[SOUND_MAX_LENGTH];
+	new die[SOUND_MAX_LENGTH];
+	new fall[SOUND_MAX_LENGTH];
+	new miss_slash[SOUND_MAX_LENGTH];
+	new miss_wall[SOUND_MAX_LENGTH];
+	new hit_normal[SOUND_MAX_LENGTH];
+	new hit_stab[SOUND_MAX_LENGTH];
+	new idle[SOUND_MAX_LENGTH];
+	new idle_last[SOUND_MAX_LENGTH];
+	new head_shot[SOUND_MAX_LENGTH];
+	new step[SOUND_MAX_LENGTH];
+	
+	get_string(1, pain, charsmax(pain));
+	get_string(2, die, charsmax(die));
+	get_string(3, fall, charsmax(fall));
+	get_string(4, miss_slash, charsmax(miss_slash));
+	get_string(5, miss_wall, charsmax(miss_wall));
+	get_string(6, hit_normal, charsmax(hit_normal));
+	get_string(7, hit_stab, charsmax(hit_stab));
+	get_string(8, idle, charsmax(idle));
+	get_string(9, idle_last, charsmax(idle_last));
+	get_string(10, head_shot, charsmax(head_shot));
+	get_string(11, step, charsmax(step));
+	
+	RegSounds(classid, SoundTeam_Nemesis, pain, die, fall, miss_slash, miss_wall, hit_normal, hit_stab, idle, idle_last, head_shot, step);
+}
+
+RegSounds(team_class, SoundTeam:sound_team, const pain[] = "", const die[] = "", const fall[] = "", const miss_slash[] = "", const miss_wall[] = "", const hit_normal[] = "", const hit_stab[] = "", const idle[] = "", const idle_last[] = "", const head_shot[] = "", const step[] = "")
+{
+	AddSoundFileArray(pain, sound_team, SoundType_Pain, team_class);
+	AddSoundFileArray(die, sound_team, SoundType_Die, team_class);
+	AddSoundFileArray(fall, sound_team, SoundType_Fall, team_class);
+	AddSoundFileArray(miss_slash, sound_team, SoundType_MissSlash, team_class);
+	AddSoundFileArray(miss_wall, sound_team, SoundType_MissWall, team_class);
+	AddSoundFileArray(hit_normal, sound_team, SoundType_HitNormal, team_class);
+	AddSoundFileArray(hit_stab, sound_team, SoundType_HitStab, team_class);
+	AddSoundFileArray(idle, sound_team, SoundType_Idle, team_class);
+	AddSoundFileArray(idle_last, sound_team, SoundType_IdleLast, team_class);
+	AddSoundFileArray(head_shot, sound_team, SoundType_HeadShot, team_class);
+	AddSoundFileArray(step, sound_team, SoundType_Step, team_class);
+}
+
+AddSoundFileArray(const sound[], SoundTeam:sound_team, SoundType:sound_type, team_class = ZP_INVALID_TEAM_CLASS)
 {
 	if(strlen(sound))
 	{
@@ -730,7 +705,7 @@ AddSoundFileArray(sound[], SoundTeam:sound_team, SoundType:sound_type, team_clas
 	return ZP_INVALID_SOUND_ID;
 }
 
-GetSoundFileArrayIndex(sound[])
+GetSoundFileArrayIndex(const sound[])
 {
 	if(strlen(sound) && (g_sound_files != Invalid_Array))
 	{
@@ -1054,7 +1029,7 @@ StrContains(const str[], const substr[], bool:caseSensitive = true)
 {
 	new strSize = strlen(str) + 1;
 	new substrSize = strlen(substr) + 1;
-	if(strSize < 1 || substrSize < 1 || substrSize > strSize)
+	if(strSize < 2 || substrSize < 2 || substrSize > strSize)
 		return -1;
 	
 	for(new i = 0; i < strSize; i++)
