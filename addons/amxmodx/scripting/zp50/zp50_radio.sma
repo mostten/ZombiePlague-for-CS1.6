@@ -22,6 +22,7 @@
 // CS Player PData Offsets (win32)
 const OFFSET_CSMENUCODE = 205
 
+new g_MaxPlayers;
 new g_msg_send_audio;
 new g_msg_text_msg;
 
@@ -65,6 +66,7 @@ public plugin_init()
 	register_clcmd("radio2", "clcmd_radio2");
 	register_clcmd("radio2", "clcmd_radio2");
 	
+	g_MaxPlayers = get_maxplayers()
 	g_msg_send_audio = get_user_msgid("SendAudio");
 	g_msg_text_msg = get_user_msgid("TextMsg");
 	
@@ -475,47 +477,53 @@ bool:push_radio_array(const name[], bool:name_trans, const message[], bool:messa
 
 RadioTeam:get_user_radio_team(client)
 {
-	if(LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(client))
-		return RadioTeam_Nemesis;
-	else if(LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(client))
-		return RadioTeam_Ghost;
-	else if(LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(client))
-		return RadioTeam_Survivor;
-	else if(zp_core_is_zombie(client))
-		return RadioTeam_Zombie;
+	if(is_user_valid(client))
+	{
+		if(LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(client))
+			return RadioTeam_Nemesis;
+		else if(LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(client))
+			return RadioTeam_Ghost;
+		else if(LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(client))
+			return RadioTeam_Survivor;
+		else if(zp_core_is_zombie(client))
+			return RadioTeam_Zombie;
+	}
 	return RadioTeam_Human;
 }
 
 get_user_radio_class(client)
 {
 	new classid = -1;
-	switch(get_user_radio_team(client))
+	if(is_user_valid(client))
 	{
-		case RadioTeam_Human:
+		switch(get_user_radio_team(client))
 		{
-			classid = zp_class_human_get_current(client);
-			if(classid != ZP_INVALID_HUMAN_CLASS)
-				return classid;
-		}
-		case RadioTeam_Ghost:
-		{
-			classid = zp_class_ghost_get_current(client);
-			if(classid != ZP_INVALID_GHOST_CLASS)
-				return classid;
-		}
-		case RadioTeam_Zombie:
-		{
-			classid = zp_class_zombie_get_current(client);
-			if(classid != ZP_INVALID_ZOMBIE_CLASS)
-				return classid;
-		}
-		case RadioTeam_Nemesis:
-		{
-			return 0;
-		}
-		case RadioTeam_Survivor:
-		{
-			return 0;
+			case RadioTeam_Human:
+			{
+				classid = zp_class_human_get_current(client);
+				if(classid != ZP_INVALID_HUMAN_CLASS)
+					return classid;
+			}
+			case RadioTeam_Ghost:
+			{
+				classid = zp_class_ghost_get_current(client);
+				if(classid != ZP_INVALID_GHOST_CLASS)
+					return classid;
+			}
+			case RadioTeam_Zombie:
+			{
+				classid = zp_class_zombie_get_current(client);
+				if(classid != ZP_INVALID_ZOMBIE_CLASS)
+					return classid;
+			}
+			case RadioTeam_Nemesis:
+			{
+				return 0;
+			}
+			case RadioTeam_Survivor:
+			{
+				return 0;
+			}
 		}
 	}
 	return classid;
@@ -716,4 +724,9 @@ public message_sendaudio(msg_id, msg_dest, client)
 			return PLUGIN_HANDLED;
 	}
 	return PLUGIN_CONTINUE;
+}
+
+bool:is_user_valid(client)
+{
+	return (1 <= client <= g_MaxPlayers);
 }
