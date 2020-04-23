@@ -64,7 +64,7 @@ public plugin_init()
 	
 	register_clcmd("radio1", "clcmd_radio1");
 	register_clcmd("radio2", "clcmd_radio2");
-	register_clcmd("radio2", "clcmd_radio2");
+	register_clcmd("radio3", "clcmd_radio3");
 	
 	g_MaxPlayers = get_maxplayers()
 	g_msg_send_audio = get_user_msgid("SendAudio");
@@ -640,9 +640,9 @@ public radio_menu_handle(client, menuid, item)
 		return PLUGIN_HANDLED;
 	}
 	
-	new itemdata[32], dummy, buffers[RadioInfo][2];
+	new itemdata[32], dummy, buffers[RadioInfo][32];
 	menu_item_getinfo(menuid, item, dummy, itemdata, charsmax(itemdata), _, _, dummy);
-	explode_string(itemdata, ",", buffers, RadioInfo, 2);
+	explode_string(itemdata, ",", buffers, RadioInfo, 32);
 	
 	new radio_info[RadioInfo];
 	radio_info[RadioInfo_Sound] = str_to_num(buffers[RadioInfo_Sound]);
