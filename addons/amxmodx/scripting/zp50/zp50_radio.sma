@@ -657,11 +657,11 @@ public radio_menu_handle(client, menuid, item)
 	if(radio_info[RadioInfo_Team] == get_user_radio_team(client) && radio_info[RadioInfo_Class] == get_user_radio_class(client))
 	{
 		new message[MESSAGE_MAX_LENGTH], sound[SOUND_MAX_LENGTH];
-		if(radio_info[RadioInfo_Message] >= 0)
+		if(ArraySize(g_radio_messages) > radio_info[RadioInfo_Message] >= 0)
 			ArrayGetString(g_radio_messages, radio_info[RadioInfo_Message], message, charsmax(message));
 		if(radio_info[RadioInfo_Msg_Trans])
 			format(message, charsmax(message), "%L", client, message);
-		if(radio_info[RadioInfo_Sound] >= 0)
+		if(ArraySize(g_radio_sounds) > radio_info[RadioInfo_Sound] >= 0)
 			ArrayGetString(g_radio_sounds, radio_info[RadioInfo_Sound], sound, charsmax(sound));
 		
 		radio_send_team(radio_info[RadioInfo_Team], message, sound);
