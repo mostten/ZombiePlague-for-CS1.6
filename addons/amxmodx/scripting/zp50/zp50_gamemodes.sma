@@ -556,6 +556,11 @@ public fw_TakeDamage(victim, inflictor, attacker, Float:damage, damage_type)
 			damage = damage_new;
 			SetHamParamFloat(4, damage);
 		}
+		
+		// 幸存者被攻击
+		if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(victim))
+			return damage_changed?HAM_HANDLED:HAM_IGNORED;
+		
 		// 最后一个人类被击杀切换激活结束本局
 		if (zp_core_get_human_count() == 1)
 			return damage_changed?HAM_HANDLED:HAM_IGNORED;
@@ -563,9 +568,14 @@ public fw_TakeDamage(victim, inflictor, attacker, Float:damage, damage_type)
 		// 仅仅当造成死亡时激活感染
 		if (g_AllowInfection && zp_class_ghost_get_infection(zp_class_ghost_get_current(attacker)) && damage >= get_user_health(victim) && GetHamReturnStatus() != HAM_SUPERCEDE)
 		{
-			// 感染当前玩家!
-			zp_class_ghost_set(victim, attacker)
-			return HAM_SUPERCEDE;
+			// 当人类允许被感染
+			new classid = zp_class_human_get_current(victim);
+			if(classid != ZP_INVALID_HUMAN_CLASS && zp_class_human_get_infection(classid))
+			{
+				// 感染当前玩家!
+				zp_class_ghost_set(victim, attacker)
+				return HAM_SUPERCEDE;
+			}
 		}
 		return damage_changed?HAM_HANDLED:HAM_IGNORED;
 	}
@@ -576,7 +586,7 @@ public fw_TakeDamage(victim, inflictor, attacker, Float:damage, damage_type)
 		// Nemesis shouldn't be infecting
 		if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(attacker))
 			return HAM_IGNORED;
-		
+			
 		// Survivor shouldn't be infected
 		if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(victim))
 			return HAM_IGNORED;
@@ -604,11 +614,16 @@ public fw_TakeDamage(victim, inflictor, attacker, Float:damage, damage_type)
 		}
 		
 		// Infect only if damage is done to victim
-		if (g_AllowInfection && damage > 0.0 && GetHamReturnStatus() != HAM_SUPERCEDE)
+		if (g_AllowInfection && zp_class_zombie_get_infection(zp_class_zombie_get_current(attacker)) && damage > 0.0 && GetHamReturnStatus() != HAM_SUPERCEDE)
 		{
-			// Infect victim!
-			zp_core_infect(victim, attacker)
-			return HAM_SUPERCEDE;
+			// 当人类允许被感染
+			new classid = zp_class_human_get_current(victim);
+			if(classid != ZP_INVALID_HUMAN_CLASS && zp_class_human_get_infection(classid))
+			{
+				// Infect victim!
+				zp_core_infect(victim, attacker)
+				return HAM_SUPERCEDE;
+			}
 		}
 		return HAM_IGNORED;
 	}

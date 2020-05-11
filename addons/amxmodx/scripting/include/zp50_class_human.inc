@@ -65,7 +65,7 @@ native zp_class_human_get_max_health(id, classid)
  * @param gravity		Class gravity multiplier.
  * @return				An internal human class ID, or ZP_INVALID_HUMAN_CLASS on failure.
  */
-native zp_class_human_register(const name[], const description[], health, Float:speed, Float:gravity)
+native zp_class_human_register(const name[], const description[], health, Float:speed, Float:gravity, bool:infection = true)
 
 /**
  * Registers a custom player model for a given human class.
@@ -130,6 +130,14 @@ native zp_class_human_get_desc(classid, description[], len)
  * @return				Damage multiplier (float value).
  */
 native Float:zp_class_human_get_dm(classid)
+
+/**
+ * Returns a human class' infection.
+ *
+ * @param classid		A valid human class ID.
+ * @return				True if it is allow infection., false otherwise.
+ */
+native zp_class_human_get_infection(classid)
 
 /**
  * Returns number of registered human classes.

@@ -903,7 +903,7 @@ public native_register_zombie_class(plugin_id, num_params)
 	new Float:speed = float(get_param(6))
 	new Float:gravity = get_param_f(7)
 	new Float:knockback = get_param_f(8)
-	new classid = zp_class_zombie_register(name, desc, health, speed, gravity)
+	new classid = zp_class_zombie_register(name, desc, health, speed, gravity, true)
 	if (classid < 0) return classid;
 	zp_class_zombie_register_model(classid, model)
 	zp_class_zombie_register_claw(classid, clawmodel)

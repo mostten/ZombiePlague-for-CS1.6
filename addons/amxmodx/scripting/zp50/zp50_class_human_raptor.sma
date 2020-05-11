@@ -19,6 +19,7 @@ new const humanclass2_models[][] = { "leet" }
 const humanclass2_health = 50
 const Float:humanclass2_speed = 1.2
 const Float:humanclass2_gravity = 1.2
+const bool:humanclass2_infection = true;
 
 new g_HumanClassID
 
@@ -26,7 +27,7 @@ public plugin_precache()
 {
 	register_plugin("[ZP] Class: Human: Raptor", ZP_VERSION_STRING, "ZP Dev Team")
 	
-	g_HumanClassID = zp_class_human_register(humanclass2_name, humanclass2_info, humanclass2_health, humanclass2_speed, humanclass2_gravity)
+	g_HumanClassID = zp_class_human_register(humanclass2_name, humanclass2_info, humanclass2_health, humanclass2_speed, humanclass2_gravity, humanclass2_infection)
 	new index
 	for (index = 0; index < sizeof humanclass2_models; index++)
 		zp_class_human_register_model(g_HumanClassID, humanclass2_models[index])

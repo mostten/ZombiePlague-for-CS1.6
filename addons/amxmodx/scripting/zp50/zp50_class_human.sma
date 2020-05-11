@@ -67,6 +67,7 @@ new Array:g_HumanClassDMFile
 new Array:g_HumanClassDamageMultiplier
 new Array:g_HumanClassModelsFile
 new Array:g_HumanClassModelsHandle
+new Array:g_HumanClassAllowInfection
 new g_HumanClass[MAXPLAYERS+1]
 new g_HumanClassNext[MAXPLAYERS+1]
 new g_AdditionalMenuText[32]
@@ -97,6 +98,7 @@ public plugin_cfg()
 		ArrayPushCell(g_HumanClassDamageMultiplier, HUMANS_DEFAULT_DMULTIPLIER)
 		ArrayPushCell(g_HumanClassModelsFile, false)
 		ArrayPushCell(g_HumanClassModelsHandle, Invalid_Array)
+		ArrayPushCell(g_HumanClassAllowInfection, true)
 		g_HumanClassCount++
 	}
 }
@@ -126,6 +128,7 @@ public plugin_natives()
 	register_native("zp_class_human_get_real_name", "_class_human_get_real_name")
 	register_native("zp_class_human_get_desc", "native_class_human_get_desc")
 	register_native("zp_class_human_get_dm", "native_class_human_get_dm")
+	register_native("zp_class_human_get_infection", "_class_human_get_infection")
 	register_native("zp_class_human_get_count", "native_class_human_get_count")
 	register_native("zp_class_human_show_menu", "native_class_human_show_menu")
 	register_native("zp_class_human_menu_text_add", "_class_human_menu_text_add")
@@ -141,6 +144,7 @@ public plugin_natives()
 	g_HumanClassDamageMultiplier = ArrayCreate(1, 1)
 	g_HumanClassModelsFile = ArrayCreate(1, 1)
 	g_HumanClassModelsHandle = ArrayCreate(1, 1)
+	g_HumanClassAllowInfection = ArrayCreate(1, 1)
 }
 
 public client_putinserver(id)
@@ -445,6 +449,7 @@ public native_class_human_register(plugin_id, num_params)
 	new health = get_param(3)
 	new Float:speed = get_param_f(4)
 	new Float:gravity = get_param_f(5)
+	new bool:infection = (get_param(6) > 0)
 	
 	// Load settings from human classes file
 	new real_name[32]
@@ -488,6 +493,9 @@ public native_class_human_register(plugin_id, num_params)
 	}
 	ArrayPushCell(g_HumanClassModelsHandle, class_models)
 	
+	// Infection
+	human_infection_register(real_name, infection);
+	
 	// Health
 	if (!amx_load_setting_int(ZP_HUMANCLASSES_FILE, real_name, "HEALTH", health))
 		amx_save_setting_int(ZP_HUMANCLASSES_FILE, real_name, "HEALTH", health)
@@ -516,6 +524,17 @@ public native_class_human_register(plugin_id, num_params)
 	
 	g_HumanClassCount++
 	return g_HumanClassCount - 1;
+}
+
+human_infection_register(const real_name[], const bool:infection = true)
+{
+	new infection_file;
+	if (!amx_load_setting_int(ZP_HUMANCLASSES_FILE, real_name, "INFECTION", infection_file))
+	{
+		infection_file = infection?1:0;
+		amx_save_setting_int(ZP_HUMANCLASSES_FILE, real_name, "INFECTION", infection_file);
+	}
+	ArrayPushCell(g_HumanClassAllowInfection, infection_file);
 }
 
 public _class_human_register_model(plugin_id, num_params)
@@ -672,6 +691,19 @@ public Float:native_class_human_get_dm(plugin_id, num_params)
 	
 	// Return human class damage multiplier
 	return ArrayGetCell(g_HumanClassDamageMultiplier, classid);
+}
+
+public _class_human_get_infection(plugin_id, num_params)
+{
+	new classid = get_param(1)
+	
+	if (classid < 0 || classid >= g_HumanClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid human class id (%d)", classid)
+		return -1;
+	}
+	
+	return ArrayGetCell(g_HumanClassAllowInfection, classid) > 0;
 }
 
 public native_class_human_get_count(plugin_id, num_params)
