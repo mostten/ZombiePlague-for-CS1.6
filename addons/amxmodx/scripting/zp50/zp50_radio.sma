@@ -64,7 +64,7 @@ public plugin_init()
 	
 	register_clcmd("radio1", "clcmd_radio1");
 	register_clcmd("radio2", "clcmd_radio2");
-	register_clcmd("radio2", "clcmd_radio2");
+	register_clcmd("radio3", "clcmd_radio3");
 	
 	g_MaxPlayers = get_maxplayers()
 	g_msg_send_audio = get_user_msgid("SendAudio");
@@ -640,9 +640,9 @@ public radio_menu_handle(client, menuid, item)
 		return PLUGIN_HANDLED;
 	}
 	
-	new itemdata[32], dummy, buffers[RadioInfo][2];
+	new itemdata[32], dummy, buffers[RadioInfo][32];
 	menu_item_getinfo(menuid, item, dummy, itemdata, charsmax(itemdata), _, _, dummy);
-	explode_string(itemdata, ",", buffers, RadioInfo, 2);
+	explode_string(itemdata, ",", buffers, RadioInfo, 32);
 	
 	new radio_info[RadioInfo];
 	radio_info[RadioInfo_Sound] = str_to_num(buffers[RadioInfo_Sound]);
@@ -657,11 +657,11 @@ public radio_menu_handle(client, menuid, item)
 	if(radio_info[RadioInfo_Team] == get_user_radio_team(client) && radio_info[RadioInfo_Class] == get_user_radio_class(client))
 	{
 		new message[MESSAGE_MAX_LENGTH], sound[SOUND_MAX_LENGTH];
-		if(radio_info[RadioInfo_Message] >= 0)
+		if(ArraySize(g_radio_messages) > radio_info[RadioInfo_Message] >= 0)
 			ArrayGetString(g_radio_messages, radio_info[RadioInfo_Message], message, charsmax(message));
 		if(radio_info[RadioInfo_Msg_Trans])
 			format(message, charsmax(message), "%L", client, message);
-		if(radio_info[RadioInfo_Sound] >= 0)
+		if(ArraySize(g_radio_sounds) > radio_info[RadioInfo_Sound] >= 0)
 			ArrayGetString(g_radio_sounds, radio_info[RadioInfo_Sound], sound, charsmax(sound));
 		
 		radio_send_team(radio_info[RadioInfo_Team], message, sound);
