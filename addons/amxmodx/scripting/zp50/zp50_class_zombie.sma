@@ -75,6 +75,7 @@ new Array:g_ZombieClassModelsHandle
 new Array:g_ZombieClassClawsFile
 new Array:g_ZombieClassClawsHandle
 new Array:g_ZombieClassAllowInfection
+new Array:g_ZombieClassAllowBlood
 new g_ZombieClass[MAXPLAYERS+1]
 new g_ZombieClassNext[MAXPLAYERS+1]
 new g_AdditionalMenuText[32]
@@ -122,6 +123,7 @@ public plugin_cfg()
 		ArrayPushCell(g_ZombieClassClawsFile, false)
 		ArrayPushCell(g_ZombieClassClawsHandle, Invalid_Array)
 		ArrayPushCell(g_ZombieClassAllowInfection, true)
+		ArrayPushCell(g_ZombieClassAllowBlood, true)
 		g_ZombieClassCount++
 	}
 }
@@ -145,6 +147,7 @@ public plugin_natives()
 	register_native("zp_class_zombie_get_kb", "native_class_zombie_get_kb")
 	register_native("zp_class_zombie_get_dm", "native_class_zombie_get_dm")
 	register_native("zp_class_zombie_get_infection", "_class_zombie_get_infection")
+	register_native("zp_class_zombie_get_blood", "_class_zombie_get_blood")
 	register_native("zp_class_zombie_get_count", "native_class_zombie_get_count")
 	register_native("zp_class_zombie_show_menu", "native_class_zombie_show_menu")
 	register_native("zp_class_zombie_menu_text_add", "_class_zombie_menu_text_add")
@@ -165,6 +168,7 @@ public plugin_natives()
 	g_ZombieClassClawsHandle = ArrayCreate(1, 1)
 	g_ZombieClassClawsFile = ArrayCreate(1, 1)
 	g_ZombieClassAllowInfection = ArrayCreate(1, 1)
+	g_ZombieClassAllowBlood = ArrayCreate(1, 1)
 	
 	set_module_filter("module_filter")
 	set_native_filter("native_filter")
@@ -511,6 +515,7 @@ public native_class_zombie_register(plugin_id, num_params)
 	new Float:speed = get_param_f(4)
 	new Float:gravity = get_param_f(5)
 	new bool:infection = (get_param(6) > 0)
+	new bool:blood = (get_param(7) > 0)
 	
 	// Load settings from zombie classes file
 	new real_name[32]
@@ -580,6 +585,9 @@ public native_class_zombie_register(plugin_id, num_params)
 	// Infection
 	zombie_infection_register(real_name, infection);
 	
+	// Blood
+	zombie_blood_register(real_name, blood);
+	
 	// Health
 	if (!amx_load_setting_int(ZP_ZOMBIECLASSES_FILE, real_name, "HEALTH", health))
 		amx_save_setting_int(ZP_ZOMBIECLASSES_FILE, real_name, "HEALTH", health)
@@ -630,6 +638,17 @@ zombie_infection_register(const real_name[], const bool:infection = true)
 		amx_save_setting_int(ZP_ZOMBIECLASSES_FILE, real_name, "INFECTION", infection_file);
 	}
 	ArrayPushCell(g_ZombieClassAllowInfection, infection_file);
+}
+
+zombie_blood_register(const real_name[], const bool:blood = true)
+{
+	new blood_file;
+	if (!amx_load_setting_int(ZP_ZOMBIECLASSES_FILE, real_name, "BLOOD", blood_file))
+	{
+		blood_file = blood?1:0;
+		amx_save_setting_int(ZP_ZOMBIECLASSES_FILE, real_name, "BLOOD", blood_file);
+	}
+	ArrayPushCell(g_ZombieClassAllowBlood, blood_file);
 }
 
 public _class_zombie_register_model(plugin_id, num_params)
@@ -878,6 +897,19 @@ public _class_zombie_get_infection(plugin_id, num_params)
 	}
 	
 	return ArrayGetCell(g_ZombieClassAllowInfection, classid) > 0;
+}
+
+public _class_zombie_get_blood(plugin_id, num_params)
+{
+	new classid = get_param(1)
+	
+	if (classid < 0 || classid >= g_ZombieClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid zombie class id (%d)", classid)
+		return -1;
+	}
+	
+	return ArrayGetCell(g_ZombieClassAllowBlood, classid) > 0;
 }
 
 public native_class_zombie_get_count(plugin_id, num_params)

@@ -22,6 +22,7 @@ const Float:zombieclass3_speed = 0.75
 const Float:zombieclass3_gravity = 0.75
 const Float:zombieclass3_knockback = 1.25
 const bool:zombieclass3_infection = true;
+const bool:zombieclass3_blood = true;
 
 new g_ZombieClassID
 
@@ -31,7 +32,7 @@ public plugin_precache()
 	
 	new index
 	
-	g_ZombieClassID = zp_class_zombie_register(zombieclass3_name, zombieclass3_info, zombieclass3_health, zombieclass3_speed, zombieclass3_gravity, zombieclass3_infection)
+	g_ZombieClassID = zp_class_zombie_register(zombieclass3_name, zombieclass3_info, zombieclass3_health, zombieclass3_speed, zombieclass3_gravity, zombieclass3_infection, zombieclass3_blood)
 	zp_class_zombie_register_kb(g_ZombieClassID, zombieclass3_knockback)
 	for (index = 0; index < sizeof zombieclass3_models; index++)
 		zp_class_zombie_register_model(g_ZombieClassID, zombieclass3_models[index])

@@ -16,6 +16,8 @@
 #include <amx_settings_api>
 #include <cs_ham_bots_api>
 #include <zp50_core>
+#define LIBRARY_ZOMBIE "zp50_class_zombie"
+#include <zp50_class_zombie>
 #define LIBRARY_NEMESIS "zp50_class_nemesis"
 #include <zp50_class_nemesis>
 #define LIBRARY_GHOST "zp50_class_ghost"
@@ -85,7 +87,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_GHOST) || equal(module, LIBRARY_ZOMBIE))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -141,7 +143,24 @@ public zp_fw_core_infect_post(id, attacker)
 		
 		// Zombie bleeding?
 		if (get_pcvar_num(cvar_zombie_bleeding))
-			set_task(0.7, "zombie_bleeding", id+TASK_BLOOD, _, _, "b")
+		{
+			new bool:blood;
+			if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(id))
+			{
+				new ghost = zp_class_ghost_get_current(id);
+				blood = (ghost != ZP_INVALID_GHOST_CLASS && zp_class_ghost_get_blood(ghost));
+			}
+			else if (LibraryExists(LIBRARY_ZOMBIE, LibType_Library))
+			{
+				new zombie = zp_class_zombie_get_current(id);
+				blood = (zombie != ZP_INVALID_ZOMBIE_CLASS && zp_class_zombie_get_blood(zombie));
+			}
+			else
+				blood = true;
+			
+			if(blood)
+				set_task(0.7, "zombie_bleeding", id+TASK_BLOOD, _, _, "b");
+		}
 	}
 	else
 	{

@@ -62,9 +62,11 @@ native zp_class_zombie_get_max_health(id, classid)
  * @param health		Class health.
  * @param speed			Class maxspeed (can be a multiplier).
  * @param gravity		Class gravity multiplier.
+ * @param infection		Class allow infection.
+ * @param blood			Class allow blood.
  * @return				An internal zombie class ID, or ZP_INVALID_ZOMBIE_CLASS on failure.
  */
-native zp_class_zombie_register(const name[], const description[], health, Float:speed, Float:gravity, bool:infection = true)
+native zp_class_zombie_register(const name[], const description[], health, Float:speed, Float:gravity, bool:infection = true, bool:blood = true)
 
 /**
  * Registers a custom player model for a given zombie class.
@@ -160,9 +162,17 @@ native Float:zp_class_zombie_get_dm(classid)
  * Returns a zombie class' infection.
  *
  * @param classid		A valid zombie class ID.
- * @return				True if it is allow infection., false otherwise.
+ * @return				True if it is allow infection, false otherwise.
  */
 native zp_class_zombie_get_infection(classid)
+
+/**
+ * Returns a zombie class' blood.
+ *
+ * @param classid		A valid zombie class ID.
+ * @return				True if it is allow blood, false otherwise.
+ */
+native zp_class_zombie_get_blood(classid)
 
 /**
  * Returns number of registered zombie classes.

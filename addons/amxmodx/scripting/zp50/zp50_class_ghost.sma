@@ -75,6 +75,7 @@ new Array:g_GhostClassModelsHandle
 new Array:g_GhostClassClawsFile
 new Array:g_GhostClassClawsHandle
 new Array:g_GhostClassAllowInfection
+new Array:g_GhostClassAllowBlood
 new Array:g_IntervalPrimaryAttack
 new Array:g_IntervalSecondaryAttack
 new Array:g_DamagePrimaryAttack
@@ -134,6 +135,7 @@ public plugin_cfg()
 		ArrayPushCell(g_GhostClassClawsFile, false)
 		ArrayPushCell(g_GhostClassClawsHandle, Invalid_Array)
 		ArrayPushCell(g_GhostClassAllowInfection, true)
+		ArrayPushCell(g_GhostClassAllowBlood, true)
 		ArrayPushCell(g_IntervalPrimaryAttack, DEFAULT_INTERVAL_PRIMARYATTACK)
 		ArrayPushCell(g_IntervalSecondaryAttack, DEFAULT_INTERVAL_SECONDARYATTACK)
 		ArrayPushCell(g_DamagePrimaryAttack, DEFAULT_DAMAGE_PRIMARYATTACK)
@@ -167,6 +169,7 @@ public plugin_natives()
 	register_native("zp_class_ghost_set", "native_class_ghost_set")
 	register_native("zp_class_ghost_get_alive_count", "_class_ghost_get_alive_count")
 	register_native("zp_class_ghost_get_infection", "_class_ghost_get_infection")
+	register_native("zp_class_ghost_get_blood", "_class_ghost_get_blood")
 	register_native("zp_get_primary_interval", "_get_interval_primary_attack")
 	register_native("zp_get_secondary_interval", "_get_interval_secondary_attack")
 	register_native("zp_get_primary_damage", "_get_damage_primary_attack")
@@ -188,6 +191,7 @@ public plugin_natives()
 	g_GhostClassClawsHandle = ArrayCreate(1, 1)
 	g_GhostClassClawsFile = ArrayCreate(1, 1)
 	g_GhostClassAllowInfection = ArrayCreate(1, 1)
+	g_GhostClassAllowBlood = ArrayCreate(1, 1)
 	g_IntervalPrimaryAttack = ArrayCreate(1, 1)
 	g_IntervalSecondaryAttack = ArrayCreate(1, 1)
 	g_DamagePrimaryAttack = ArrayCreate(1, 1)
@@ -545,6 +549,7 @@ public native_class_ghost_register(plugin_id, num_params)
 	new Float:intervalSecondaryAttack = get_param_f(8)
 	new Float:damagePrimaryAttack = get_param_f(9)
 	new Float:damageSecondaryAttack = get_param_f(10)
+	new blood = get_param(11)
 	
 	// 从有另类性文件载入配置
 	new real_name[32]
@@ -615,6 +620,11 @@ public native_class_ghost_register(plugin_id, num_params)
 	if (!amx_load_setting_int(ZP_GHOSTCLASSES_FILE, real_name, "INFECTION", infection))
 		amx_save_setting_int(ZP_GHOSTCLASSES_FILE, real_name, "INFECTION", infection)
 	ArrayPushCell(g_GhostClassAllowInfection, infection)
+	
+	// Blood
+	if (!amx_load_setting_int(ZP_GHOSTCLASSES_FILE, real_name, "BLOOD", blood))
+		amx_save_setting_int(ZP_GHOSTCLASSES_FILE, real_name, "BLOOD", blood)
+	ArrayPushCell(g_GhostClassAllowBlood, blood)
 	
 	// Health
 	if (!amx_load_setting_int(ZP_GHOSTCLASSES_FILE, real_name, "HEALTH", health))
@@ -999,6 +1009,19 @@ public _class_ghost_get_infection(plugin_id, num_params)
 	}
 	
 	return bool:ArrayGetCell(g_GhostClassAllowInfection, classid);
+}
+
+public _class_ghost_get_blood(plugin_id, num_params)
+{
+	new classid = get_param(1)
+	
+	if (classid < 0 || classid >= g_GhostClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid ghost class id (%d)", classid)
+		return -1;
+	}
+	
+	return bool:ArrayGetCell(g_GhostClassAllowBlood, classid);
 }
 
 public Float:_get_interval_primary_attack(plugin_id, num_params)

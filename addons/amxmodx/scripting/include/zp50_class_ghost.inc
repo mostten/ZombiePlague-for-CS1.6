@@ -57,15 +57,20 @@ native zp_class_ghost_get_max_health(id, classid)
  * Note: The returned ghost class ID can be later used to identify
  * the class when calling the zp_get_user_ghost_class() natives.
  *
- * @param name			Caption to display on the menu.
- * @param description	Brief description of the class.
- * @param health		Class health.
- * @param speed			Class maxspeed (can be a multiplier).
- * @param gravity		Class gravity multiplier.
- * @param infection		Class allow infection.
- * @return				An internal ghost class ID, or ZP_INVALID_GHOST_CLASS on failure.
+ * @param name					Caption to display on the menu.
+ * @param description			Brief description of the class.
+ * @param health				Class health.
+ * @param speed					Class maxspeed (can be a multiplier).
+ * @param gravity				Class gravity multiplier.
+ * @param infection				Class allow infection.
+ * @param speedPrimaryAttack	Primary attack speed.
+ * @param speedSecondaryAttack	Secondary attack speed.
+ * @param damagePrimaryAttack	Primary attack damage.
+ * @param damageSecondaryAttack	Secondary attack damage.
+ * @param blood					Class allow blood.
+ * @return						An internal ghost class ID, or ZP_INVALID_GHOST_CLASS on failure.
  */
-native zp_class_ghost_register(const name[], const description[], health, Float:speed, Float:gravity, bool:infection, Float:speedPrimaryAttack, Float:speedSecondaryAttack, Float:damagePrimaryAttack, Float:damageSecondaryAttack)
+native zp_class_ghost_register(const name[], const description[], health, Float:speed, Float:gravity, bool:infection, Float:speedPrimaryAttack, Float:speedSecondaryAttack, Float:damagePrimaryAttack, Float:damageSecondaryAttack, bool:blood = true)
 
 /**
  * Registers a custom player model for a given ghost class.
@@ -228,7 +233,7 @@ native zp_class_ghost_get_alive_count()
  * Returns a ghost class' infection.
  *
  * @param classid		A valid ghost class ID.
- * @return				True if it is allow infection., false otherwise.
+ * @return				True if it is allow infection, false otherwise.
  */
 native zp_class_ghost_get_infection(classid)
 
@@ -263,3 +268,11 @@ native Float:zp_get_primary_damage(classid)
  * @return				Damage of secondary attack.
  */
 native Float:zp_get_secondary_damage(classid)
+
+/**
+ * Returns a ghost class' blood.
+ *
+ * @param classid		A valid ghost class ID.
+ * @return				True if it is allow blood, false otherwise.
+ */
+native zp_class_ghost_get_blood(classid)

@@ -36,6 +36,7 @@ const Float:intervalPrimaryAttack = 0.5
 const Float:intervalSecondaryAttack = 0.8
 const Float:damagePrimaryAttack = 15.0
 const Float:damageSecondaryAttack = 25.0
+const bool:ghostclass1_blood = true;
 
 new g_GhostClassID
 new g_Visible[MAXPLAYERS+1]
@@ -86,7 +87,7 @@ public plugin_precache()
 	
 	new index
 	
-	g_GhostClassID = zp_class_ghost_register(ghostclass1_name, ghostclass1_info, ghostclass1_health, ghostclass1_speed, ghostclass1_gravity, ghostclass1_infection, intervalPrimaryAttack, intervalSecondaryAttack, damagePrimaryAttack, damageSecondaryAttack)
+	g_GhostClassID = zp_class_ghost_register(ghostclass1_name, ghostclass1_info, ghostclass1_health, ghostclass1_speed, ghostclass1_gravity, ghostclass1_infection, intervalPrimaryAttack, intervalSecondaryAttack, damagePrimaryAttack, damageSecondaryAttack, ghostclass1_blood)
 	zp_class_ghost_register_kb(g_GhostClassID, ghostclass1_knockback)
 	for (index = 0; index < sizeof ghostclass1_models; index++)
 		zp_class_ghost_register_model(g_GhostClassID, ghostclass1_models[index])
