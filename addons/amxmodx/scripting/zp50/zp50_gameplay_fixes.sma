@@ -49,6 +49,7 @@ new g_MaxPlayers
 new g_fwSpawn
 new g_GameModeStarted
 new g_RoundEnded
+new g_LastMan
 
 new cvar_remove_doors
 new cvar_block_pushables
@@ -56,6 +57,7 @@ new cvar_block_suicide
 new cvar_worldspawn_kill_respawn
 new cvar_disable_minmodels
 new cvar_keep_hp_on_disconnect
+new cvar_last_man_infection_disable
 
 public plugin_init()
 {
@@ -67,11 +69,14 @@ public plugin_init()
 	cvar_worldspawn_kill_respawn = register_cvar("zp_worldspawn_kill_respawn", "1")
 	cvar_disable_minmodels = register_cvar("zp_disable_minmodels", "1")
 	cvar_keep_hp_on_disconnect = register_cvar("zp_keep_hp_on_disconnect", "1")
+	cvar_last_man_infection_disable = get_cvar_pointer("zp_last_man_infection_disable")
 	
 	register_clcmd("chooseteam", "clcmd_changeteam")
 	register_clcmd("jointeam", "clcmd_changeteam")
 	
 	register_event("HLTV", "event_round_start", "a", "1=0", "2=0")
+	RegisterHam(Ham_Killed, "player", "fw_PlayerKilled")
+	RegisterHamBots(Ham_Killed, "fw_PlayerKilled")
 	RegisterHam(Ham_Spawn, "player", "fw_PlayerSpawn_Post", 1)
 	RegisterHamBots(Ham_Spawn, "fw_PlayerSpawn_Post", 1)
 	RegisterHam(Ham_Use, "func_tank", "fw_UseStationary")
@@ -83,6 +88,7 @@ public plugin_init()
 	unregister_forward(FM_Spawn, g_fwSpawn)
 	
 	register_message(get_user_msgid("Health"), "message_health")
+	register_message(get_user_msgid ("ClCorpse"), "message_clcorpse" )
 	
 	g_MaxPlayers = get_maxplayers()
 }
@@ -164,6 +170,7 @@ public clcmd_changeteam(id)
 // Event Round Start
 public event_round_start()
 {
+	g_LastMan = -1
 	g_RoundEnded = false
 	
 	// Remove doors?
@@ -215,6 +222,110 @@ public fw_Spawn(entity)
 	}
 	
 	return FMRES_IGNORED;
+}
+
+// 修复最后一个玩家被感染后无法结束本局
+public fw_PlayerKilled(victim, attacker, shouldgib)
+{
+	// 没有禁止最后一个人感染或者不是最后一个人类被击杀
+	if (get_pcvar_num(cvar_last_man_infection_disable) > 0 || !zp_core_is_last_human(victim))
+		return;
+	
+	// 攻击者为复仇者禁止此功能
+	if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(attacker))
+		return;
+	
+	// 被击杀者为幸存者禁止此功能
+	if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(victim))
+		return;
+	
+	// 丧尸被击杀
+	if (zp_core_is_zombie(victim))
+		return;
+	
+	// 人类种类没有激活被感染属性
+	new human = zp_class_human_get_current(victim);
+	if(human == ZP_INVALID_HUMAN_CLASS || !zp_class_human_get_infection(human))
+		return;
+	
+	// 恶灵击杀人类
+	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(attacker))
+	{
+		new ghost = zp_class_ghost_get_current(attacker);
+		if(ghost != ZP_INVALID_GHOST_CLASS && zp_class_ghost_get_infection(ghost))
+			last_man_infection(victim, true);
+	}
+	// 丧尸击杀人类
+	else if (zp_core_is_zombie(attacker))
+	{
+		new zombie = zp_class_zombie_get_current(attacker);
+		if(zombie != ZP_INVALID_ZOMBIE_CLASS && zp_class_zombie_get_infection(zombie))
+			last_man_infection(victim, false);
+	}
+}
+
+// 最后一个人类被丧尸击杀感染
+last_man_infection(client, bool:ghost)
+{
+	new Float:origin[3], Float:angles[3], Float:v_angle[3];
+	pev(client, pev_origin, origin);
+	pev(client, pev_angles, angles);
+	pev(client, pev_v_angle, v_angle);
+	
+	new DataPack:dp = CreateDataPack();
+	WritePackCell(dp, client);
+	WritePackCell(dp, ghost?1:0);
+	WritePackFloat(dp, origin[0]);
+	WritePackFloat(dp, origin[1]);
+	WritePackFloat(dp, origin[2]);
+	WritePackFloat(dp, angles[0]);
+	WritePackFloat(dp, angles[1]);
+	WritePackFloat(dp, angles[2]);
+	WritePackFloat(dp, v_angle[0]);
+	WritePackFloat(dp, v_angle[1]);
+	WritePackFloat(dp, v_angle[2]);
+	ResetPack(dp, false);
+	
+	g_LastMan = client;
+	RequestFrame("teleport_last_man", dp);
+}
+
+// 传送最后一个人类到死亡前位置
+public teleport_last_man(DataPack:dp)
+{
+	new client = ReadPackCell(dp);
+	new bool:ghost = ReadPackCell(dp) > 0;
+	new Float:origin[3], Float:angles[3], Float:v_angles[3];
+	origin[0] = ReadPackFloat(dp);
+	origin[1] = ReadPackFloat(dp);
+	origin[2] = ReadPackFloat(dp);
+	angles[0] = ReadPackFloat(dp);
+	angles[1] = ReadPackFloat(dp);
+	angles[2] = ReadPackFloat(dp);
+	v_angles[0] = ReadPackFloat(dp);
+	v_angles[1] = ReadPackFloat(dp);
+	v_angles[2] = ReadPackFloat(dp);
+	DestroyDataPack(dp);
+	
+	if(1 <= client <= g_MaxPlayers && is_user_connected(client) && !is_user_alive(client))
+	{
+		cs_user_spawn(client);
+		
+		if(ghost)
+			zp_class_ghost_set(client, client);
+		else
+			zp_core_infect(client, client);
+		
+		teleport_user(client, origin, angles, v_angles);
+	}
+}
+
+// 传送玩家到指定位置
+teleport_user(client, const Float:origin[3], const Float:angles[3], const Float:v_angles[3])
+{
+	engfunc(EngFunc_SetOrigin, client, origin);
+	set_pev(client, pev_angles, angles);
+	set_pev(client, pev_v_angle, v_angles);
 }
 
 // Ham Player Spawn Post Forward
@@ -428,6 +539,18 @@ public message_health(msg_id, msg_dest, msg_entity)
 	
 	// HUD can only show as much as 255 hp
 	set_msg_arg_int(1, get_msg_argtype(1), 255)
+}
+
+// 发送客户端生成尸体信息
+public message_clcorpse(msg_id, msg_dest, msg_entity)
+{
+	new client = get_msg_arg_int(12);
+	if(get_pcvar_num(cvar_last_man_infection_disable) < 1 && g_MaxPlayers >= g_LastMan >= 1 && g_LastMan == client)
+	{
+		g_LastMan = -1;
+		return PLUGIN_HANDLED;
+	}
+	return PLUGIN_CONTINUE;
 }
 
 // Get Alive CTs -returns number of CTs alive-
