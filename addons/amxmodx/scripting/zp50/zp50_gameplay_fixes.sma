@@ -287,6 +287,7 @@ last_man_infection(client, bool:ghost)
 	ResetPack(dp, false);
 	
 	g_LastMan = client;
+	zp_core_respawn_as_zombie(client, true);
 	RequestFrame("teleport_last_man", dp);
 }
 
@@ -314,7 +315,7 @@ public teleport_last_man(DataPack:dp)
 		if(ghost)
 			zp_class_ghost_set(client, client);
 		else
-			zp_core_infect(client, client);
+			zp_core_force_infect(client);
 		
 		teleport_user(client, origin, angles, v_angles);
 	}
