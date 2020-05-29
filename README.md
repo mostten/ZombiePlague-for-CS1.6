@@ -28,6 +28,10 @@
 
 11.新增幸存者伤害倍数指令
 
+12.新增人类僵尸等注册无线电音效接口
+
+12.增强夜视仪显示效果,优化增加FPS(zp_nvision_custom值为2时启用)
+
 新增服务器指令:
 
 1.ghost_mod_flashlight: 是否激活手电筒特效(1打开,0关闭)
@@ -56,7 +60,9 @@
 
 13.zp_survivor_damage:幸存者攻击目标时的伤害倍数
 
-14.zp_last_man_infection_disable:最后一个人是否禁止感染
+14.zp_last_man_infection:最后一个人是否感染
+
+15.zp_lighting_chance: 在雨天每局闪电出现的几率(1或者更大的整数值，值越大几率越低)
 
 新增配置文件:
 
