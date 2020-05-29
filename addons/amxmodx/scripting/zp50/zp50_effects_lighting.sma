@@ -14,6 +14,9 @@
 #include <amx_settings_api>
 #include <zp50_core_const>
 
+#define LIBRARY_AMBIENCE_EFFECTS "zp50_ambience_effects"
+#include <zp50_ambience_effects>
+
 // Settings file
 new const ZP_SETTINGS_FILE[] = "zombieplague.ini"
 
@@ -23,6 +26,7 @@ new const thunder_lights[][] = { "ijklmnonmlkjihgfedcb" , "klmlkjihgfedcbaabcded
 new const map_lights[][] = { "b", "c" , "" , "d" }
 new const sound_thunder[][] = { "zombie_plague/thunder1.wav" , "zombie_plague/thunder2.wav" }
 
+#define MAXPLAYERS 32
 #define SOUND_MAX_LENGTH 64
 #define LIGHT_MAX_LENGTH 2
 #define LIGHTS_MAX_LENGTH 32
@@ -42,17 +46,24 @@ new g_ThunderLightIndex, g_ThunderLightMaxLen
 new g_ThunderLight[LIGHTS_MAX_LENGTH]
 new g_MapLight[LIGHT_MAX_LENGTH]
 
-new cvar_lighting, cvar_thunder_time
+new cvar_lighting, cvar_thunder_time, cvar_lighting_chance
 new cvar_triggered_lights
+
+new g_lighting_random_enable = false;
+
+new g_fw_result;
+new g_fw_set_user_lightstyle_pre;
+new g_fw_set_user_lightstyle_post;
 
 public plugin_init()
 {
-	register_plugin("[ZP] Effects: Lighting", ZP_VERSION_STRING, "ZP Dev Team")
+	register_plugin("[ZP] Effects: Lighting", ZP_VERSION_STRING, "ZP Dev Team");
 	
-	register_event("HLTV", "event_round_start", "a", "1=0", "2=0")
+	register_event("HLTV", "event_round_start", "a", "1=0", "2=0");
 	
 	cvar_lighting = register_cvar("zp_lighting", "1")
 	cvar_thunder_time = register_cvar("zp_thunder_time", "10")
+	cvar_lighting_chance = register_cvar("zp_lighting_chance", "2")
 	cvar_triggered_lights = register_cvar("zp_triggered_lights", "1")
 	
 	// Set a random skybox?
@@ -71,6 +82,10 @@ public plugin_init()
 
 public plugin_precache()
 {
+	// Forward
+	g_fw_set_user_lightstyle_pre = CreateMultiForward("zp_fw_set_user_lightstyle_pre", ET_CONTINUE, FP_CELL, FP_STRING);
+	g_fw_set_user_lightstyle_post = CreateMultiForward("zp_fw_set_user_lightstyle_post", ET_IGNORE, FP_CELL, FP_STRING);
+	
 	// Initialize arrays
 	g_sky_names = ArrayCreate(SKYNAME_MAX_LENGTH, 1)
 	g_thunder_lights = ArrayCreate(LIGHTS_MAX_LENGTH, 1)
@@ -161,11 +176,46 @@ public plugin_cfg()
 	event_round_start()
 }
 
+public plugin_natives()
+{
+	register_library("zp50_effects_lighting");
+	register_native("zp_set_user_lightstyle", "native_set_user_lightstyle");
+	
+	set_module_filter("module_filter");
+	set_native_filter("native_filter");
+}
+public module_filter(const module[])
+{
+	if (equal(module, LIBRARY_AMBIENCE_EFFECTS))
+		return PLUGIN_HANDLED;
+	
+	return PLUGIN_CONTINUE;
+}
+public native_filter(const name[], index, trap)
+{
+	if (!trap)
+		return PLUGIN_HANDLED;
+	
+	return PLUGIN_CONTINUE;
+}
+
+public native_set_user_lightstyle(plugin_id, num_params)
+{
+	new id = get_param(1);
+	new light_style[LIGHT_MAX_LENGTH];
+	get_string(2, light_style, charsmax(light_style));
+	new bool:call_forward = bool:get_param(3);
+	set_user_lightstyle(id, light_style, call_forward);
+}
+
 // Event Round Start
 public event_round_start()
 {
 	// Map lights random
 	get_random_map_light(g_MapLight);
+	
+	// Map lights chance
+	g_lighting_random_enable = (random_num(1, get_pcvar_num(cvar_lighting_chance)) == 1);
 	
 	// Remove lights?
 	if (!get_pcvar_num(cvar_triggered_lights))
@@ -198,16 +248,23 @@ public lighting_task()
 	}
 	
 	// Set thunder task if enabled and not already in place
-	if (get_pcvar_float(cvar_thunder_time) > 0.0 && !task_exists(TASK_THUNDER) && !task_exists(TASK_THUNDER_LIGHTS))
+	if (get_pcvar_float(cvar_thunder_time) > 0.0 && !task_exists(TASK_THUNDER) && !task_exists(TASK_THUNDER_LIGHTS) && g_lighting_random_enable)
 	{
-		g_ThunderLightIndex = 0
-		ArrayGetString(g_thunder_lights, random_num(0, ArraySize(g_thunder_lights) - 1), g_ThunderLight, charsmax(g_ThunderLight))
-		g_ThunderLightMaxLen = strlen(g_ThunderLight)
-		set_task(get_pcvar_float(cvar_thunder_time), "thunder_task", TASK_THUNDER)
+		// Disable lighting on Weather not rain
+		if(LibraryExists(LIBRARY_AMBIENCE_EFFECTS, LibType_Library) && zp_ambience_get_weather() != Weather_Rain)
+		{
+			set_lightstyle(lighting);
+			return;
+		}
+		
+		g_ThunderLightIndex = 0;
+		ArrayGetString(g_thunder_lights, random_num(0, ArraySize(g_thunder_lights) - 1), g_ThunderLight, charsmax(g_ThunderLight));
+		g_ThunderLightMaxLen = strlen(g_ThunderLight);
+		set_task(get_pcvar_float(cvar_thunder_time), "thunder_task", TASK_THUNDER);
 	}
 	
 	// Set lighting only when no thunders are going on
-	if (!task_exists(TASK_THUNDER_LIGHTS)) engfunc(EngFunc_LightStyle, 0, lighting)
+	if (!task_exists(TASK_THUNDER_LIGHTS)){set_lightstyle(lighting);}
 }
 
 // Thunder task
@@ -230,16 +287,16 @@ public thunder_task()
 	lighting[0] = g_ThunderLight[g_ThunderLightIndex]
 	switch(get_lights_configs(lighting_config))
 	{
-		case 0:{engfunc(EngFunc_LightStyle, 0, lighting);}
+		case 0:{set_lightstyle(lighting);}
 		case 1:
 		{
 			if(get_light_level(lighting) >= get_light_level(g_MapLight))
-				engfunc(EngFunc_LightStyle, 0, lighting);
+				set_lightstyle(lighting);
 		}
 		default:
 		{
 			if(get_light_level(lighting) >= get_light_level(lighting_config))
-				engfunc(EngFunc_LightStyle, 0, lighting);
+				set_lightstyle(lighting);
 		}
 	}
 	
@@ -305,6 +362,33 @@ get_random_map_light(light[LIGHT_MAX_LENGTH])
 		}
 	}
 	return index;
+}
+
+set_lightstyle(const light_style[LIGHT_MAX_LENGTH])
+{
+	for(new client = 1; client <= MAXPLAYERS; client++)
+	{
+		if(is_user_connected(client) && !is_user_bot(client))
+			set_user_lightstyle(client, light_style, true);
+	}
+}
+
+set_user_lightstyle(client, const light_style[LIGHT_MAX_LENGTH], bool:call_forward = true)
+{
+	if(call_forward)
+	{
+		ExecuteForward(g_fw_set_user_lightstyle_pre, g_fw_result, client, light_style);
+		if(g_fw_result >= PLUGIN_HANDLED)
+			return;
+	}
+	
+	message_begin(MSG_ONE_UNRELIABLE, SVC_LIGHTSTYLE, .player = client);
+	write_byte(0);
+	write_string(light_style);
+	message_end();
+	
+	if(call_forward)
+		ExecuteForward(g_fw_set_user_lightstyle_post, g_fw_result, client, light_style);
 }
 
 get_light_level(light[LIGHT_MAX_LENGTH])

@@ -60,7 +60,7 @@ new g_ForwardResult
 new g_MaxPlayers
 new g_HudSync
 
-new cvar_gamemode_delay, cvar_round_start_show_hud, cvar_prevent_consecutive, cvar_last_man_infection_disable
+new cvar_gamemode_delay, cvar_round_start_show_hud, cvar_prevent_consecutive, cvar_last_man_infection
 
 // Game Modes data
 new Array:g_GameModeName
@@ -110,7 +110,7 @@ public plugin_init()
 	cvar_gamemode_delay = register_cvar("zp_gamemode_delay", "10")
 	cvar_round_start_show_hud = register_cvar("zp_round_start_show_hud", "1")
 	cvar_prevent_consecutive = register_cvar("zp_prevent_consecutive_modes", "1")
-	cvar_last_man_infection_disable = register_cvar("zp_last_man_infection_disable", "1")
+	cvar_last_man_infection = register_cvar("zp_last_man_infection", "1")
 	
 	g_Forwards[FW_GAME_MODE_CHOOSE_PRE] = CreateMultiForward("zp_fw_gamemodes_choose_pre", ET_CONTINUE, FP_CELL, FP_CELL)
 	g_Forwards[FW_GAME_MODE_CHOOSE_POST] = CreateMultiForward("zp_fw_gamemodes_choose_post", ET_IGNORE, FP_CELL, FP_CELL)
@@ -599,15 +599,13 @@ public fw_TakeDamage(victim, inflictor, attacker, Float:damage, damage_type)
 		if (zp_core_get_human_count() == 1)
 		{
 			// Disable infection?
-			if(get_pcvar_num(cvar_last_man_infection_disable) > 0)
-			{
-				damage_changed = reset_user_damage(attacker, ClassTeam_Zombie, damage);
-			}
-			else
+			if(get_pcvar_num(cvar_last_man_infection) > 0)
 			{
 				damage = get_user_health(victim)*1.0;
 				damage_changed = true;
 			}
+			else{damage_changed = reset_user_damage(attacker, ClassTeam_Zombie, damage);}
+			
 			if(damage_changed)
 				SetHamParamFloat(4, damage);
 			return damage_changed?HAM_HANDLED:HAM_IGNORED;

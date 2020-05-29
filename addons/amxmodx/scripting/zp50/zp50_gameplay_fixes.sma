@@ -57,7 +57,7 @@ new cvar_block_suicide
 new cvar_worldspawn_kill_respawn
 new cvar_disable_minmodels
 new cvar_keep_hp_on_disconnect
-new cvar_last_man_infection_disable
+new cvar_last_man_infection
 
 public plugin_init()
 {
@@ -69,7 +69,7 @@ public plugin_init()
 	cvar_worldspawn_kill_respawn = register_cvar("zp_worldspawn_kill_respawn", "1")
 	cvar_disable_minmodels = register_cvar("zp_disable_minmodels", "1")
 	cvar_keep_hp_on_disconnect = register_cvar("zp_keep_hp_on_disconnect", "1")
-	cvar_last_man_infection_disable = get_cvar_pointer("zp_last_man_infection_disable")
+	cvar_last_man_infection = get_cvar_pointer("zp_last_man_infection")
 	
 	register_clcmd("chooseteam", "clcmd_changeteam")
 	register_clcmd("jointeam", "clcmd_changeteam")
@@ -227,8 +227,8 @@ public fw_Spawn(entity)
 // 修复最后一个玩家被感染后无法结束本局
 public fw_PlayerKilled(victim, attacker, shouldgib)
 {
-	// 没有禁止最后一个人感染或者不是最后一个人类被击杀
-	if (get_pcvar_num(cvar_last_man_infection_disable) > 0 || !zp_core_is_last_human(victim))
+	// 没有打开最后一个人感染或者不是最后一个人类被击杀
+	if (get_pcvar_num(cvar_last_man_infection) < 1 || !zp_core_is_last_human(victim))
 		return;
 	
 	// 攻击者为复仇者禁止此功能
@@ -546,7 +546,7 @@ public message_health(msg_id, msg_dest, msg_entity)
 public message_clcorpse(msg_id, msg_dest, msg_entity)
 {
 	new client = get_msg_arg_int(12);
-	if(get_pcvar_num(cvar_last_man_infection_disable) < 1 && g_MaxPlayers >= g_LastMan >= 1 && g_LastMan == client)
+	if(get_pcvar_num(cvar_last_man_infection) > 0 && g_MaxPlayers >= g_LastMan >= 1 && g_LastMan == client)
 	{
 		g_LastMan = -1;
 		return PLUGIN_HANDLED;

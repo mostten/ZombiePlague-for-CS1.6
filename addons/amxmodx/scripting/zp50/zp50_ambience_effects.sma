@@ -13,9 +13,11 @@
 #include <fakemeta>
 #include <amx_settings_api>
 #include <zp50_core_const>
+#include <zp50_ambience_effects>
 
 // Settings file
 new const ZP_SETTINGS_FILE[] = "zombieplague.ini";
+new const FOG_CHANCE = 2;
 
 #define FOG_VALUE_MAX_LENGTH 16
 
@@ -28,18 +30,8 @@ new g_ambience_fog_density[FOG_VALUE_MAX_LENGTH] = "0.0018";
 new g_ambience_fog_color[FOG_VALUE_MAX_LENGTH] = "128 128 128";
 new const g_ambience_ents[][] = { "env_fog", "env_rain", "env_snow" };
 
-
-#define MAXPLAYERS 32
-
-enum _:Ambience_Effects{
-	Ambience_Sunny = 0,
-	Ambience_Rain,
-	Ambience_Snow,
-	Ambience_Fog
-};
-
-new g_weather = Ambience_Sunny;
 new g_msg_fog, g_msg_recieve;
+new Ambience_Weather:g_weather = Weather_Sunny;
 
 public plugin_init()
 {
@@ -83,6 +75,17 @@ public plugin_precache()
 	g_fwSpawn = register_forward(FM_Spawn, "fw_Spawn")
 	
 	ambience_create();
+}
+
+public plugin_natives()
+{
+	register_library("zp50_ambience_effects");
+	register_native("zp_ambience_get_weather", "native_ambience_get_weather");
+}
+
+public native_ambience_get_weather(plugin_id, num_params)
+{
+	return _:g_weather;
 }
 
 ambience_create()
@@ -130,42 +133,34 @@ str_tocolor(const color_string[FOG_VALUE_MAX_LENGTH], color_array[3])
 	}
 }
 
-get_ambience_random()
+Ambience_Weather:get_ambience_random()
 {
-	switch(random_num(Ambience_Sunny, Ambience_Fog))
+	switch(random_num(_:Weather_Sunny, _:Weather_Snow))
 	{
-		case Ambience_Rain:
+		case Weather_Rain:
 		{
 			if(g_ambience_rain > 0)
-				return  Ambience_Rain;
+				return  Weather_Rain;
 			else if(g_ambience_snow > 0)
-				return Ambience_Snow;
-			else if(g_ambience_fog > 0)
-				return Ambience_Fog;
+				return Weather_Snow;
 		}
-		case Ambience_Snow:
+		case Weather_Snow:
 		{
 			if(g_ambience_snow > 0)
-				return  Ambience_Snow;
-			else if(g_ambience_fog > 0)
-				return Ambience_Fog;
+				return  Weather_Snow;
 			else if(g_ambience_rain > 0)
-				return  Ambience_Rain;
-		}
-		case Ambience_Fog:
-		{
-			if(g_ambience_fog > 0)
-				return Ambience_Fog;
-			else if(g_ambience_rain > 0)
-				return  Ambience_Rain;
-			else if(g_ambience_snow > 0)
-				return Ambience_Snow;
+				return  Weather_Rain;
 		}
 	}
-	return Ambience_Sunny;
+	return Weather_Sunny;
 }
 
-get_ambience_config()
+bool:has_fog()
+{
+	return (g_ambience_fog > 0 && random_num(1, FOG_CHANCE) == 1);
+}
+
+Ambience_Weather:get_ambience_config()
 {
 	if (g_ambience_random > 0)
 	{
@@ -176,13 +171,11 @@ get_ambience_config()
 		if(get_ambience_config_count() > 1)
 			return get_ambience_random();
 		else if (g_ambience_rain > 0)
-			return  Ambience_Rain;
+			return  Weather_Rain;
 		else if (g_ambience_snow > 0)
-			return Ambience_Snow;
-		else if (g_ambience_fog > 0)
-			return Ambience_Fog;
+			return Weather_Snow;
 	}
-	return Ambience_Sunny;
+	return Weather_Sunny;
 }
 
 get_ambience_config_count()
@@ -192,15 +185,13 @@ get_ambience_config_count()
 		count++;
 	if(g_ambience_snow > 0)
 		count++;
-	if(g_ambience_fog > 0)
-		count++;
 	return count;
 }
 
 // Event Round Start
 public event_round_start()
 {
-	if(g_weather == Ambience_Fog)
+	if(has_fog())
 		fog_create(0, g_ambience_fog_color, str_to_float(g_ambience_fog_density), false);
 }
 
@@ -209,22 +200,21 @@ public Event_RoundEnd()
 	fog_create(0, g_ambience_fog_color, str_to_float(g_ambience_fog_density), true);
 	switch(get_ambience_config())
 	{
-		case Ambience_Rain:
+		case Weather_Rain:
 		{
-			g_weather = Ambience_Rain;
+			g_weather = Weather_Rain;
 		}
-		case Ambience_Snow:
+		case Weather_Snow:
 		{
-			g_weather = Ambience_Snow;
+			g_weather = Weather_Snow;
 		}
-		default:{g_weather = Ambience_Sunny;}
+		default:{g_weather = Weather_Sunny;}
 	}
 }
 
 public MsgReceived(msg_id, msg_dest, msg_entity)
 {
-	if(g_weather != Ambience_Fog)
-		set_msg_arg_int(1, ARG_BYTE, g_weather);
+	set_msg_arg_int(1, ARG_BYTE, _:g_weather);
 }
 
 // Entity Spawn Forward

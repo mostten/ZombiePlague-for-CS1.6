@@ -21,9 +21,19 @@
 #include <zp50_class_survivor>
 #define LIBRARY_GHOST "zp50_class_ghost"
 #include <zp50_class_ghost>
+#define LIBRARY_LIGHTING "zp50_effects_lighting"
+#include <zp50_effects_lighting>
 
 #define TASK_NIGHTVISION 100
 #define ID_NIGHTVISION (taskid - TASK_NIGHTVISION)
+
+#define MAXPLAYERS 32
+#define TASK_SCREENFADE 200
+#define ID_SCREENFADE (taskid - TASK_SCREENFADE)
+
+const UNIT_SECOND = (1<<12);
+const FFADE_IN = 0x0000;
+const FFADE_STAYOUT = 0x0004;
 
 #define flag_get(%1,%2) (%1 & (1 << (%2 & 31)))
 #define flag_get_boolean(%1,%2) (flag_get(%1,%2) ? true : false)
@@ -32,7 +42,7 @@
 
 new g_NightVisionActive
 
-new g_MsgNVGToggle
+new g_MsgNVGToggle, g_MsgScreenFade;
 
 new cvar_nvision_custom, cvar_nvision_radius
 new cvar_nvision_zombie, cvar_nvision_zombie_color_R, cvar_nvision_zombie_color_G, cvar_nvision_zombie_color_B
@@ -42,12 +52,17 @@ new cvar_nvision_nemesis, cvar_nvision_nemesis_color_R, cvar_nvision_nemesis_col
 new cvar_nvision_survivor, cvar_nvision_survivor_color_R, cvar_nvision_survivor_color_G, cvar_nvision_survivor_color_B
 new cvar_nvision_ghost, cvar_nvision_ghost_color_R, cvar_nvision_ghost_color_G, cvar_nvision_ghost_color_B
 
+new g_szCurrentLight[MAXPLAYERS+1][2];
+
 public plugin_init()
 {
 	register_plugin("[ZP] Nightvision", ZP_VERSION_STRING, "ZP Dev Team")
 	
 	g_MsgNVGToggle = get_user_msgid("NVGToggle")
 	register_message(g_MsgNVGToggle, "message_nvgtoggle")
+	
+	g_MsgScreenFade = get_user_msgid("ScreenFade");
+	register_message(g_MsgScreenFade, "message_screenfade");
 	
 	register_clcmd("nightvision", "clcmd_nightvision_toggle")
 	register_event("ResetHUD", "event_reset_hud", "b")
@@ -105,7 +120,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST) || equal(module, LIBRARY_LIGHTING))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -273,8 +288,8 @@ public clcmd_nightvision_toggle(id)
 // ResetHUD Removes CS Nightvision (bugfix)
 public event_reset_hud(id)
 {
-	if (!get_pcvar_num(cvar_nvision_custom) && flag_get(g_NightVisionActive, id))
-		cs_set_user_nvg_active(id, 1)
+	if (flag_get(g_NightVisionActive, id))
+		switch(get_pcvar_num(cvar_nvision_custom)){case 0:{cs_set_user_nvg_active(id, 1);}}
 }
 
 // Ham Player Killed Post Forward
@@ -282,6 +297,19 @@ public fw_PlayerKilled_Post(victim, attacker, shouldgib)
 {
 	// Enable spectators nightvision?
 	spectator_nightvision(victim)
+}
+
+public zp_fw_set_user_lightstyle_pre(id, const light_style[2])
+{
+	g_szCurrentLight[id][0] = light_style[0];
+	if(get_pcvar_num(cvar_nvision_custom) == 2 && flag_get(g_NightVisionActive, id))
+	{
+		zp_set_user_lightstyle(id, "#", false);
+		
+		return PLUGIN_HANDLED;
+	}
+	
+	return PLUGIN_CONTINUE;
 }
 
 public client_putinserver(id)
@@ -312,14 +340,33 @@ public spectator_nightvision(id)
 public client_disconnected(id)
 {
 	// Reset nightvision flags
-	flag_unset(g_NightVisionActive, id)
-	remove_task(id+TASK_NIGHTVISION)
+	flag_unset(g_NightVisionActive, id);
+	remove_task(id+TASK_NIGHTVISION);
+	remove_task(id+TASK_SCREENFADE);
 }
 
 // Prevent spectators' nightvision from being turned off when switching targets, etc.
 public message_nvgtoggle(msg_id, msg_dest, msg_entity)
 {
 	return PLUGIN_HANDLED;
+}
+
+public message_screenfade(msg_id, msg_dest, msg_entity)
+{
+	// Nightvision was disabled?
+	if (!flag_get(g_NightVisionActive, msg_entity))
+		return PLUGIN_CONTINUE;
+	
+	// Is this a flashbang?
+	if (get_msg_arg_int(4) != 255 || get_msg_arg_int(5) != 255 || get_msg_arg_int(6) != 255 || get_msg_arg_int(7) < 200)
+		return PLUGIN_CONTINUE;
+	
+	if(get_pcvar_num(cvar_nvision_custom) == 2)
+	{
+		remove_task(msg_entity+TASK_SCREENFADE);
+		set_task(get_msg_arg_int(1) / 4096.0, "restore_screenfade_task", msg_entity+TASK_SCREENFADE);
+	}
+	return PLUGIN_CONTINUE;
 }
 
 // Custom Night Vision Task
@@ -329,6 +376,10 @@ public custom_nightvision_task(taskid)
 	static origin[3]
 	get_user_origin(ID_NIGHTVISION, origin)
 	
+	// Getplayer's config color
+	new red, green, blue;
+	get_user_nvg_color(ID_NIGHTVISION, red, green, blue);
+	
 	// Nightvision message
 	message_begin(MSG_ONE_UNRELIABLE, SVC_TEMPENTITY, _, ID_NIGHTVISION)
 	write_byte(TE_DLIGHT) // TE id
@@ -336,56 +387,9 @@ public custom_nightvision_task(taskid)
 	write_coord(origin[1]) // y
 	write_coord(origin[2]) // z
 	write_byte(get_pcvar_num(cvar_nvision_radius)) // radius
-	
-	// Spectator
-	if (!is_user_alive(ID_NIGHTVISION))
-	{
-		write_byte(get_pcvar_num(cvar_nvision_spec_color_R)) // r
-		write_byte(get_pcvar_num(cvar_nvision_spec_color_G)) // g
-		write_byte(get_pcvar_num(cvar_nvision_spec_color_B)) // b
-	}
-	// Zombie
-	else if (zp_core_is_zombie(ID_NIGHTVISION))
-	{
-		// Nemesis Class loaded?
-		if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(ID_NIGHTVISION))
-		{
-			write_byte(get_pcvar_num(cvar_nvision_nemesis_color_R)) // r
-			write_byte(get_pcvar_num(cvar_nvision_nemesis_color_G)) // g
-			write_byte(get_pcvar_num(cvar_nvision_nemesis_color_B)) // b
-		}
-		// Ghost Class loaded?
-		else if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(ID_NIGHTVISION))
-		{
-			write_byte(get_pcvar_num(cvar_nvision_ghost_color_R)) // r
-			write_byte(get_pcvar_num(cvar_nvision_ghost_color_G)) // g
-			write_byte(get_pcvar_num(cvar_nvision_ghost_color_B)) // b
-		}
-		else
-		{
-			write_byte(get_pcvar_num(cvar_nvision_zombie_color_R)) // r
-			write_byte(get_pcvar_num(cvar_nvision_zombie_color_G)) // g
-			write_byte(get_pcvar_num(cvar_nvision_zombie_color_B)) // b
-		}
-	}
-	// Human
-	else
-	{
-		// Survivor Class loaded?
-		if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(ID_NIGHTVISION))
-		{
-			write_byte(get_pcvar_num(cvar_nvision_survivor_color_R)) // r
-			write_byte(get_pcvar_num(cvar_nvision_survivor_color_G)) // g
-			write_byte(get_pcvar_num(cvar_nvision_survivor_color_B)) // b
-		}
-		else
-		{
-			write_byte(get_pcvar_num(cvar_nvision_human_color_R)) // r
-			write_byte(get_pcvar_num(cvar_nvision_human_color_G)) // g
-			write_byte(get_pcvar_num(cvar_nvision_human_color_B)) // b
-		}
-	}
-	
+	write_byte(red) // r
+	write_byte(green) // g
+	write_byte(blue) // b
 	write_byte(2) // life
 	write_byte(0) // decay rate
 	message_end()
@@ -395,20 +399,24 @@ EnableNightVision(id)
 {
 	flag_set(g_NightVisionActive, id)
 	
-	if (!get_pcvar_num(cvar_nvision_custom))
-		cs_set_user_nvg_active(id, 1)
-	else
-		set_task(0.1, "custom_nightvision_task", id+TASK_NIGHTVISION, _, _, "b")
+	switch(get_pcvar_num(cvar_nvision_custom))
+	{
+		case 0:{cs_set_user_nvg_active(id, 1);}
+		case 1:{set_task(0.1, "custom_nightvision_task", id+TASK_NIGHTVISION, _, _, "b");}
+		case 2:{set_user_nightvision(id, true);}
+	}
 }
 
 DisableNightVision(id)
 {
 	flag_unset(g_NightVisionActive, id)
 	
-	if (!get_pcvar_num(cvar_nvision_custom))
-		cs_set_user_nvg_active(id, 0)
-	else
-		remove_task(id+TASK_NIGHTVISION)
+	switch(get_pcvar_num(cvar_nvision_custom))
+	{
+		case 0:{cs_set_user_nvg_active(id, 0);}
+		case 1:{remove_task(id+TASK_NIGHTVISION);}
+		case 2:{set_user_nightvision(id, false);}
+	}
 }
 
 stock cs_set_user_nvg_active(id, active)
@@ -417,4 +425,96 @@ stock cs_set_user_nvg_active(id, active)
 	message_begin(MSG_ONE, g_MsgNVGToggle, _, id)
 	write_byte(active) // toggle
 	message_end()
+}
+
+set_user_nightvision(client, bool:on)
+{
+	new red, green, blue, alpha = 73;
+	get_user_nvg_color(client, red, green, blue);
+	if(on)
+	{
+		zp_set_user_lightstyle(client, "#", false);
+		remove_task(client+TASK_SCREENFADE);
+		set_task(0.1, "restore_screenfade_task", client+TASK_SCREENFADE);
+	}
+	else
+	{
+		zp_set_user_lightstyle(client, g_szCurrentLight[client], false);
+		set_user_screenfade(client, 0, 0, FFADE_IN, red, green, blue, alpha);
+	}
+}
+
+get_user_nvg_color(client, &red, &green, &blue)
+{
+	// Spectator
+	if (!is_user_alive(client))
+	{
+		red = get_pcvar_num(cvar_nvision_spec_color_R);
+		green = get_pcvar_num(cvar_nvision_spec_color_G);
+		blue = get_pcvar_num(cvar_nvision_spec_color_B);
+	}
+	// Zombie
+	else if (zp_core_is_zombie(client))
+	{
+		// Nemesis Class loaded?
+		if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(client))
+		{
+			red = get_pcvar_num(cvar_nvision_nemesis_color_R);
+			green = get_pcvar_num(cvar_nvision_nemesis_color_G);
+			blue = get_pcvar_num(cvar_nvision_nemesis_color_B);
+		}
+		// Ghost Class loaded?
+		else if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(client))
+		{
+			red = get_pcvar_num(cvar_nvision_ghost_color_R);
+			green = get_pcvar_num(cvar_nvision_ghost_color_G);
+			blue = get_pcvar_num(cvar_nvision_ghost_color_B);
+		}
+		else
+		{
+			red = get_pcvar_num(cvar_nvision_zombie_color_R);
+			green = get_pcvar_num(cvar_nvision_zombie_color_G);
+			blue = get_pcvar_num(cvar_nvision_zombie_color_B);
+		}
+	}
+	// Human
+	else
+	{
+		// Survivor Class loaded?
+		if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(client))
+		{
+			red = get_pcvar_num(cvar_nvision_survivor_color_R);
+			green = get_pcvar_num(cvar_nvision_survivor_color_G);
+			blue = get_pcvar_num(cvar_nvision_survivor_color_B);
+		}
+		else
+		{
+			red = get_pcvar_num(cvar_nvision_human_color_R);
+			green = get_pcvar_num(cvar_nvision_human_color_G);
+			blue = get_pcvar_num(cvar_nvision_human_color_B);
+		}
+	}
+}
+
+set_user_screenfade(client, duration, hold_time, fade_type, red, green, blue, alpha)
+{
+	message_begin(MSG_ONE, g_MsgScreenFade, .player = client);
+	write_short(duration);
+	write_short(hold_time);
+	write_short(fade_type);
+	write_byte(red);
+	write_byte(green);
+	write_byte(blue);
+	write_byte(alpha);
+	message_end();
+}
+
+public restore_screenfade_task(taskid)
+{
+	if(!flag_get(g_NightVisionActive, ID_SCREENFADE))
+		return;
+	
+	new red, green, blue, alpha = 73;
+	get_user_nvg_color(ID_SCREENFADE, red, green, blue);
+	set_user_screenfade(ID_SCREENFADE, 0, 0, FFADE_STAYOUT, red, green, blue, alpha);
 }
