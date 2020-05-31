@@ -144,3 +144,74 @@ forward zp_fw_core_last_human(id)
  * @param id		Player index.
  */
 forward zp_fw_core_spawn_post(id)
+
+/**
+ * Called on set a player light style. You can block it by
+ * returning PLUGIN_HANDLED in your plugin.
+ *
+ * @param id			Player.
+ * @param light_style	Light style.
+ */
+forward zp_fw_core_set_lightstyle_pre(id, const light_style[ZP_LIGHTSTYLE_LENGTH]);
+
+/**
+ * Called on set a player light style.
+ *
+ * @param id			Player index.
+ * @param light_style	Light style.
+ */
+forward zp_fw_core_set_lightstyle_post(id, const light_style[ZP_LIGHTSTYLE_LENGTH]);
+
+/**
+ * Set a player light style.
+ *
+ * @param id			Player index.
+ * @param light_style	Light style.
+ * @param call_forward	Active forward?
+ */
+native zp_core_set_lightstyle(id, const light_style[ZP_LIGHTSTYLE_LENGTH], bool:call_forward = true);
+
+/**
+ * Set a player screen fade.
+ *
+ * @param id			Player index.
+ * @param duration		Duration.
+ * @param hold_time		Hold time.
+ * @param fade_type		Fade type.
+ * @param red			Color red.
+ * @param green			Color green.
+ * @param blue			Color blue.
+ * @param alpha			Color alpha.
+ * @param call_forward	Active forward?
+ * @return				True if it's finish, false otherwise.
+ */
+native zp_core_set_screenfade(id, duration, hold_time, fade_type, red, green, blue, alpha, bool:call_forward = true);
+
+/**
+ * Called on set a player screen fade.
+ * returning PLUGIN_HANDLED in your plugin.
+ *
+ * @param id			Player index.
+ * @param duration		Duration.
+ * @param hold_time		Hold time.
+ * @param fade_type		Fade type.
+ * @param red			Color red.
+ * @param green			Color green.
+ * @param blue			Color blue.
+ * @param alpha			Color alpha.
+ */
+forward zp_fw_core_set_screenfade_pre(id, duration, hold_time, fade_type, red, green, blue, alpha);
+
+/**
+ * Called on set a player screen fade.
+ *
+ * @param id			Player index.
+ * @param duration		Duration.
+ * @param hold_time		Hold time.
+ * @param fade_type		Fade type.
+ * @param red			Color red.
+ * @param green			Color green.
+ * @param blue			Color blue.
+ * @param alpha			Color alpha.
+ */
+forward zp_fw_core_set_screenfade_post(id, duration, hold_time, fade_type, red, green, blue, alpha);

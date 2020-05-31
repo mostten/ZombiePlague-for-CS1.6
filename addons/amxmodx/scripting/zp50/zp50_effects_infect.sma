@@ -38,7 +38,7 @@ const FFADE_IN = 0x0000
 
 new g_HudSync
 new g_MsgDeathMsg, g_MsgScoreAttrib
-new g_MsgScreenFade, g_MsgScreenShake, g_MsgDamage
+new g_MsgScreenShake, g_MsgDamage
 
 new cvar_infect_show_hud
 new cvar_infect_show_notice
@@ -60,7 +60,6 @@ public plugin_init()
 	
 	g_MsgDeathMsg = get_user_msgid("DeathMsg")
 	g_MsgScoreAttrib = get_user_msgid("ScoreAttrib")
-	g_MsgScreenFade = get_user_msgid("ScreenFade")
 	g_MsgScreenShake = get_user_msgid("ScreenShake")
 	g_MsgDamage = get_user_msgid("Damage")
 	
@@ -166,15 +165,12 @@ infection_effects(id)
 	// Screen fade?
 	if (get_pcvar_num(cvar_infect_screen_fade))
 	{
-		message_begin(MSG_ONE_UNRELIABLE, g_MsgScreenFade, _, id)
-		write_short(UNIT_SECOND) // duration
-		write_short(0) // hold time
-		write_short(FFADE_IN) // fade type
-		write_byte(get_pcvar_num(cvar_infect_screen_fade_R)) // r
-		write_byte(get_pcvar_num(cvar_infect_screen_fade_G)) // g
-		write_byte(get_pcvar_num(cvar_infect_screen_fade_B)) // b
-		write_byte (255) // alpha
-		message_end()
+		new hold_time = 0;// hold time
+		new red = get_pcvar_num(cvar_infect_screen_fade_R); // r
+		new green = get_pcvar_num(cvar_infect_screen_fade_G); // g
+		new blue = get_pcvar_num(cvar_infect_screen_fade_B); // b
+		new alpha = 255; // alpha
+		zp_core_set_screenfade(id, UNIT_SECOND, hold_time, FFADE_IN, red, green, blue, alpha, true);
 	}
 	
 	// Screen shake?

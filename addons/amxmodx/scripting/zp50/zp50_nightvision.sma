@@ -21,8 +21,6 @@
 #include <zp50_class_survivor>
 #define LIBRARY_GHOST "zp50_class_ghost"
 #include <zp50_class_ghost>
-#define LIBRARY_LIGHTING "zp50_effects_lighting"
-#include <zp50_effects_lighting>
 
 #define TASK_NIGHTVISION 100
 #define ID_NIGHTVISION (taskid - TASK_NIGHTVISION)
@@ -31,7 +29,6 @@
 #define TASK_SCREENFADE 200
 #define ID_SCREENFADE (taskid - TASK_SCREENFADE)
 
-const UNIT_SECOND = (1<<12);
 const FFADE_IN = 0x0000;
 const FFADE_STAYOUT = 0x0004;
 
@@ -52,7 +49,7 @@ new cvar_nvision_nemesis, cvar_nvision_nemesis_color_R, cvar_nvision_nemesis_col
 new cvar_nvision_survivor, cvar_nvision_survivor_color_R, cvar_nvision_survivor_color_G, cvar_nvision_survivor_color_B
 new cvar_nvision_ghost, cvar_nvision_ghost_color_R, cvar_nvision_ghost_color_G, cvar_nvision_ghost_color_B
 
-new g_szCurrentLight[MAXPLAYERS+1][2];
+new g_szCurrentLight[MAXPLAYERS+1][ZP_LIGHTSTYLE_LENGTH];
 
 public plugin_init()
 {
@@ -120,7 +117,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST) || equal(module, LIBRARY_LIGHTING))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -299,12 +296,12 @@ public fw_PlayerKilled_Post(victim, attacker, shouldgib)
 	spectator_nightvision(victim)
 }
 
-public zp_fw_set_user_lightstyle_pre(id, const light_style[2])
+public zp_fw_core_set_lightstyle_pre(id, const light_style[ZP_LIGHTSTYLE_LENGTH])
 {
 	g_szCurrentLight[id][0] = light_style[0];
 	if(get_pcvar_num(cvar_nvision_custom) == 2 && flag_get(g_NightVisionActive, id))
 	{
-		zp_set_user_lightstyle(id, "#", false);
+		zp_core_set_lightstyle(id, "#", false);
 		
 		return PLUGIN_HANDLED;
 	}
@@ -367,6 +364,11 @@ public message_screenfade(msg_id, msg_dest, msg_entity)
 		set_task(get_msg_arg_int(1) / 4096.0, "restore_screenfade_task", msg_entity+TASK_SCREENFADE);
 	}
 	return PLUGIN_CONTINUE;
+}
+
+public zp_fw_core_set_screenfade_post(id, duration, hold_time, fade_type, red, green, blue, alpha)
+{
+	RequestFrame("restore_screenfade_task", id+TASK_SCREENFADE);
 }
 
 // Custom Night Vision Task
@@ -433,14 +435,13 @@ set_user_nightvision(client, bool:on)
 	get_user_nvg_color(client, red, green, blue);
 	if(on)
 	{
-		zp_set_user_lightstyle(client, "#", false);
-		remove_task(client+TASK_SCREENFADE);
-		set_task(0.1, "restore_screenfade_task", client+TASK_SCREENFADE);
+		zp_core_set_lightstyle(client, "#", false);
+		RequestFrame("restore_screenfade_task", client+TASK_SCREENFADE);
 	}
 	else
 	{
-		zp_set_user_lightstyle(client, g_szCurrentLight[client], false);
-		set_user_screenfade(client, 0, 0, FFADE_IN, red, green, blue, alpha);
+		zp_core_set_lightstyle(client, g_szCurrentLight[client], false);
+		zp_core_set_screenfade(client, 0, 0, FFADE_IN, red, green, blue, alpha, false);
 	}
 }
 
@@ -496,19 +497,6 @@ get_user_nvg_color(client, &red, &green, &blue)
 	}
 }
 
-set_user_screenfade(client, duration, hold_time, fade_type, red, green, blue, alpha)
-{
-	message_begin(MSG_ONE, g_MsgScreenFade, .player = client);
-	write_short(duration);
-	write_short(hold_time);
-	write_short(fade_type);
-	write_byte(red);
-	write_byte(green);
-	write_byte(blue);
-	write_byte(alpha);
-	message_end();
-}
-
 public restore_screenfade_task(taskid)
 {
 	if(!flag_get(g_NightVisionActive, ID_SCREENFADE))
@@ -516,5 +504,5 @@ public restore_screenfade_task(taskid)
 	
 	new red, green, blue, alpha = 73;
 	get_user_nvg_color(ID_SCREENFADE, red, green, blue);
-	set_user_screenfade(ID_SCREENFADE, 0, 0, FFADE_STAYOUT, red, green, blue, alpha);
+	zp_core_set_screenfade(ID_SCREENFADE, 0, 0, FFADE_STAYOUT, red, green, blue, alpha, false);
 }

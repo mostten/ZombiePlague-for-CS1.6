@@ -87,7 +87,7 @@ new Float:g_FrozenRenderingColor[MAXPLAYERS+1][3]
 new g_FrozenRenderingRender[MAXPLAYERS+1]
 new Float:g_FrozenRenderingAmount[MAXPLAYERS+1]
 
-new g_MsgDamage, g_MsgScreenFade
+new g_MsgDamage
 new g_trailSpr, g_exploSpr, g_glassSpr
 
 new cvar_grenade_frost_duration, cvar_grenade_frost_hudicon
@@ -109,7 +109,6 @@ public plugin_init()
 	RegisterHam(Ham_Think, "grenade", "fw_ThinkGrenade")
 	
 	g_MsgDamage = get_user_msgid("Damage")
-	g_MsgScreenFade = get_user_msgid("ScreenFade")
 	
 	cvar_grenade_frost_duration = register_cvar("zp_grenade_frost_duration", "3")
 	cvar_grenade_frost_hudicon = register_cvar("zp_grenade_frost_hudicon", "1")
@@ -509,15 +508,7 @@ set_freeze(victim)
 	emit_sound(victim, CHAN_BODY, sound, 1.0, ATTN_NORM, 0, PITCH_NORM)
 	
 	// Add a blue tint to their screen
-	message_begin(MSG_ONE, g_MsgScreenFade, _, victim)
-	write_short(0) // duration
-	write_short(0) // hold time
-	write_short(FFADE_STAYOUT) // fade type
-	write_byte(0) // red
-	write_byte(50) // green
-	write_byte(200) // blue
-	write_byte(100) // alpha
-	message_end()
+	zp_core_set_screenfade(victim, 0, 0, FFADE_STAYOUT, 0, 50, 200, 100, true);
 	
 	// Update player entity rendering
 	ApplyFrozenRendering(victim)
@@ -593,15 +584,7 @@ public remove_freeze(taskid)
 	fm_set_rendering_float(ID_FROST_REMOVE, g_FrozenRenderingFx[ID_FROST_REMOVE], g_FrozenRenderingColor[ID_FROST_REMOVE], g_FrozenRenderingRender[ID_FROST_REMOVE], g_FrozenRenderingAmount[ID_FROST_REMOVE])
 	
 	// Gradually remove screen's blue tint
-	message_begin(MSG_ONE, g_MsgScreenFade, _, ID_FROST_REMOVE)
-	write_short(UNIT_SECOND) // duration
-	write_short(0) // hold time
-	write_short(FFADE_IN) // fade type
-	write_byte(0) // red
-	write_byte(50) // green
-	write_byte(200) // blue
-	write_byte(100) // alpha
-	message_end()
+	zp_core_set_screenfade(ID_FROST_REMOVE, UNIT_SECOND, 0, FFADE_IN, 0, 50, 200, 100, true);
 	
 	// Broken glass sound
 	static sound[SOUND_MAX_LENGTH]

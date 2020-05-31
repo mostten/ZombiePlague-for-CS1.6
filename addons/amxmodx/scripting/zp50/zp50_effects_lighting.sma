@@ -12,7 +12,7 @@
 #include <amxmodx>
 #include <fakemeta>
 #include <amx_settings_api>
-#include <zp50_core_const>
+#include <zp50_core>
 
 #define LIBRARY_AMBIENCE_EFFECTS "zp50_ambience_effects"
 #include <zp50_ambience_effects>
@@ -28,7 +28,6 @@ new const sound_thunder[][] = { "zombie_plague/thunder1.wav" , "zombie_plague/th
 
 #define MAXPLAYERS 32
 #define SOUND_MAX_LENGTH 64
-#define LIGHT_MAX_LENGTH 2
 #define LIGHTS_MAX_LENGTH 32
 #define SKYNAME_MAX_LENGTH 32
 
@@ -44,16 +43,12 @@ new Array:g_sound_thunder
 new g_SkyArrayIndex
 new g_ThunderLightIndex, g_ThunderLightMaxLen
 new g_ThunderLight[LIGHTS_MAX_LENGTH]
-new g_MapLight[LIGHT_MAX_LENGTH]
+new g_MapLight[ZP_LIGHTSTYLE_LENGTH]
 
 new cvar_lighting, cvar_thunder_time, cvar_lighting_chance
 new cvar_triggered_lights
 
 new g_lighting_random_enable = false;
-
-new g_fw_result;
-new g_fw_set_user_lightstyle_pre;
-new g_fw_set_user_lightstyle_post;
 
 public plugin_init()
 {
@@ -82,10 +77,6 @@ public plugin_init()
 
 public plugin_precache()
 {
-	// Forward
-	g_fw_set_user_lightstyle_pre = CreateMultiForward("zp_fw_set_user_lightstyle_pre", ET_CONTINUE, FP_CELL, FP_STRING);
-	g_fw_set_user_lightstyle_post = CreateMultiForward("zp_fw_set_user_lightstyle_post", ET_IGNORE, FP_CELL, FP_STRING);
-	
 	// Initialize arrays
 	g_sky_names = ArrayCreate(SKYNAME_MAX_LENGTH, 1)
 	g_thunder_lights = ArrayCreate(LIGHTS_MAX_LENGTH, 1)
@@ -178,9 +169,6 @@ public plugin_cfg()
 
 public plugin_natives()
 {
-	register_library("zp50_effects_lighting");
-	register_native("zp_set_user_lightstyle", "native_set_user_lightstyle");
-	
 	set_module_filter("module_filter");
 	set_native_filter("native_filter");
 }
@@ -197,15 +185,6 @@ public native_filter(const name[], index, trap)
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
-}
-
-public native_set_user_lightstyle(plugin_id, num_params)
-{
-	new id = get_param(1);
-	new light_style[LIGHT_MAX_LENGTH];
-	get_string(2, light_style, charsmax(light_style));
-	new bool:call_forward = bool:get_param(3);
-	set_user_lightstyle(id, light_style, call_forward);
 }
 
 // Event Round Start
@@ -240,7 +219,7 @@ public remove_lights()
 public lighting_task()
 {
 	// Get lighting style
-	new lighting[LIGHT_MAX_LENGTH];
+	new lighting[ZP_LIGHTSTYLE_LENGTH];
 	switch(get_lights_configs(lighting))
 	{
 		case 0:{return;}
@@ -283,7 +262,7 @@ public thunder_task()
 	}
 	
 	// Apply current thunder light index
-	new lighting[LIGHT_MAX_LENGTH], lighting_config[LIGHT_MAX_LENGTH];
+	new lighting[ZP_LIGHTSTYLE_LENGTH], lighting_config[ZP_LIGHTSTYLE_LENGTH];
 	lighting[0] = g_ThunderLight[g_ThunderLightIndex]
 	switch(get_lights_configs(lighting_config))
 	{
@@ -320,10 +299,10 @@ PlaySoundToClients(const sound[])
 		client_cmd(0, "spk ^"%s^"", sound)
 }
 
-get_lights_configs(lighting[LIGHT_MAX_LENGTH])
+get_lights_configs(lighting[ZP_LIGHTSTYLE_LENGTH])
 {
 	// Get lighting style
-	get_pcvar_string(cvar_lighting, lighting, LIGHT_MAX_LENGTH);
+	get_pcvar_string(cvar_lighting, lighting, ZP_LIGHTSTYLE_LENGTH);
 	
 	// Lighting disabled? ["0"]
 	if (lighting[0] == '0')
@@ -348,7 +327,7 @@ get_random_map_lights(lights[])
 	return index;
 }
 
-get_random_map_light(light[LIGHT_MAX_LENGTH])
+get_random_map_light(light[ZP_LIGHTSTYLE_LENGTH])
 {
 	new index = -1;
 	new lights[LIGHTS_MAX_LENGTH];
@@ -364,34 +343,16 @@ get_random_map_light(light[LIGHT_MAX_LENGTH])
 	return index;
 }
 
-set_lightstyle(const light_style[LIGHT_MAX_LENGTH])
+set_lightstyle(const light_style[ZP_LIGHTSTYLE_LENGTH])
 {
 	for(new client = 1; client <= MAXPLAYERS; client++)
 	{
 		if(is_user_connected(client) && !is_user_bot(client))
-			set_user_lightstyle(client, light_style, true);
+			zp_core_set_lightstyle(client, light_style, true);
 	}
 }
 
-set_user_lightstyle(client, const light_style[LIGHT_MAX_LENGTH], bool:call_forward = true)
-{
-	if(call_forward)
-	{
-		ExecuteForward(g_fw_set_user_lightstyle_pre, g_fw_result, client, light_style);
-		if(g_fw_result >= PLUGIN_HANDLED)
-			return;
-	}
-	
-	message_begin(MSG_ONE_UNRELIABLE, SVC_LIGHTSTYLE, .player = client);
-	write_byte(0);
-	write_string(light_style);
-	message_end();
-	
-	if(call_forward)
-		ExecuteForward(g_fw_set_user_lightstyle_post, g_fw_result, client, light_style);
-}
-
-get_light_level(light[LIGHT_MAX_LENGTH])
+get_light_level(light[ZP_LIGHTSTYLE_LENGTH])
 {
 	if(tolower(light[0]) == 'a')
 		return 1;
