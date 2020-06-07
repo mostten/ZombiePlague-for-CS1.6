@@ -49,7 +49,7 @@ new g_MaxPlayers
 new g_fwSpawn
 new g_GameModeStarted
 new g_RoundEnded
-new g_LastMan
+new g_last_human, g_last_zombie;
 
 new cvar_remove_doors
 new cvar_block_pushables
@@ -58,6 +58,10 @@ new cvar_worldspawn_kill_respawn
 new cvar_disable_minmodels
 new cvar_keep_hp_on_disconnect
 new cvar_last_man_infection
+new cvar_zombie_headshot_die
+new cvar_frags_zombie_killed
+new g_MsgDeathMsg
+new bool:g_user_headshot[32]
 
 public plugin_init()
 {
@@ -70,11 +74,15 @@ public plugin_init()
 	cvar_disable_minmodels = register_cvar("zp_disable_minmodels", "1")
 	cvar_keep_hp_on_disconnect = register_cvar("zp_keep_hp_on_disconnect", "1")
 	cvar_last_man_infection = get_cvar_pointer("zp_last_man_infection")
+	cvar_zombie_headshot_die = get_cvar_pointer("zp_zombie_headshot_die")
+	cvar_frags_zombie_killed = get_cvar_pointer("zp_frags_zombie_killed")
 	
 	register_clcmd("chooseteam", "clcmd_changeteam")
 	register_clcmd("jointeam", "clcmd_changeteam")
 	
 	register_event("HLTV", "event_round_start", "a", "1=0", "2=0")
+	RegisterHam(Ham_TraceAttack, "player", "fw_TraceAttack_post", 1)
+	RegisterHamBots(Ham_TraceAttack, "fw_TraceAttack_post", 1)
 	RegisterHam(Ham_Killed, "player", "fw_PlayerKilled")
 	RegisterHamBots(Ham_Killed, "fw_PlayerKilled")
 	RegisterHam(Ham_Spawn, "player", "fw_PlayerSpawn_Post", 1)
@@ -88,7 +96,8 @@ public plugin_init()
 	unregister_forward(FM_Spawn, g_fwSpawn)
 	
 	register_message(get_user_msgid("Health"), "message_health")
-	register_message(get_user_msgid ("ClCorpse"), "message_clcorpse" )
+	register_message(get_user_msgid ("ClCorpse"), "message_clcorpse")
+	g_MsgDeathMsg = get_user_msgid("DeathMsg")
 	
 	g_MaxPlayers = get_maxplayers()
 }
@@ -170,12 +179,12 @@ public clcmd_changeteam(id)
 // Event Round Start
 public event_round_start()
 {
-	g_LastMan = -1
-	g_RoundEnded = false
+	g_last_human = -1;
+	g_last_zombie = -1;
+	g_RoundEnded = false;
 	
 	// Remove doors?
-	if (get_pcvar_num(cvar_remove_doors) > 0)
-		set_task(0.1, "remove_doors")
+	if (get_pcvar_num(cvar_remove_doors) > 0){set_task(0.1, "remove_doors");}
 }
 
 // Remove Doors Task
@@ -224,43 +233,121 @@ public fw_Spawn(entity)
 	return FMRES_IGNORED;
 }
 
-// 修复最后一个玩家被感染后无法结束本局
+// Ham Trace Attack Forward
+public fw_TraceAttack_post(victim, attacker, Float:damage, Float:direction[3], tracehandle, damage_type)
+{
+	g_user_headshot[victim] = (damage_type & DMG_BULLET && get_tr2(tracehandle, TR_iHitgroup) == HIT_HEAD && damage >= get_user_health(victim));
+	
+	return HAM_IGNORED;
+}
+
 public fw_PlayerKilled(victim, attacker, shouldgib)
 {
-	// 没有打开最后一个人感染或者不是最后一个人类被击杀
-	if (get_pcvar_num(cvar_last_man_infection) < 1 || !zp_core_is_last_human(victim))
-		return;
+	// 攻击者不是玩家或者是被爆头
+	if(!is_user_valid(attacker) || g_user_headshot[victim]){return HAM_IGNORED;}
 	
-	// 攻击者为复仇者禁止此功能
-	if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(attacker))
-		return;
+	// 重置爆头标识
+	g_user_headshot[victim] = false;
 	
-	// 被击杀者为幸存者禁止此功能
-	if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(victim))
-		return;
-	
-	// 丧尸被击杀
-	if (zp_core_is_zombie(victim))
-		return;
-	
-	// 人类种类没有激活被感染属性
-	new human = zp_class_human_get_current(victim);
-	if(human == ZP_INVALID_HUMAN_CLASS || !zp_class_human_get_infection(human))
-		return;
-	
-	// 恶灵击杀人类
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(attacker))
+	// 修复最后一个僵尸不被爆头却结束本局
+	if (get_pcvar_num(cvar_zombie_headshot_die) > 0 && zp_core_is_last_zombie(victim) && !zp_core_is_zombie(attacker))
 	{
-		new ghost = zp_class_ghost_get_current(attacker);
-		if(ghost != ZP_INVALID_GHOST_CLASS && zp_class_ghost_get_infection(ghost))
-			last_man_infection(victim, true);
+		// 被击杀者为复仇者禁止此功能
+		if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(victim)){return HAM_IGNORED;}
+		
+		// 被击杀者为恶灵禁止此功能
+		if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(victim)){return HAM_IGNORED;}
+		
+		// 更新玩家死亡和积分信息
+		new frags = get_pcvar_num(cvar_frags_zombie_killed);
+		UpdateFrags(attacker, victim, (frags > 0)?frags:0, 1, 1);
+		SendDeathMsg(attacker, victim, false);
+		
+		// 重生玩家
+		last_zombie_respawn(victim, false);
+		
+		return HAM_SUPERCEDE;
 	}
-	// 丧尸击杀人类
-	else if (zp_core_is_zombie(attacker))
+	
+	// 修复最后一个玩家被感染后无法结束本局
+	else if (get_pcvar_num(cvar_last_man_infection) > 0 && zp_core_is_last_human(victim) && zp_core_is_zombie(attacker))
 	{
-		new zombie = zp_class_zombie_get_current(attacker);
-		if(zombie != ZP_INVALID_ZOMBIE_CLASS && zp_class_zombie_get_infection(zombie))
-			last_man_infection(victim, false);
+		// 攻击者为复仇者禁止此功能
+		if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(attacker)){return HAM_IGNORED;}
+			
+		// 被击杀者为幸存者禁止此功能
+		if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(victim)){return HAM_IGNORED;}
+			
+		// 人类种类没有激活被感染属性
+		new human = zp_class_human_get_current(victim);
+		if(human == ZP_INVALID_HUMAN_CLASS || !zp_class_human_get_infection(human)){return HAM_IGNORED;}
+		
+		// 恶灵击杀人类
+		if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(attacker))
+		{
+			new ghost = zp_class_ghost_get_current(attacker);
+			if (ghost != ZP_INVALID_GHOST_CLASS && zp_class_ghost_get_infection(ghost))
+				last_man_infection(victim, true);
+		}
+		// 丧尸击杀人类
+		else if (zp_core_is_zombie(attacker))
+		{
+			new zombie = zp_class_zombie_get_current(attacker);
+			if (zombie != ZP_INVALID_ZOMBIE_CLASS && zp_class_zombie_get_infection(zombie))
+				last_man_infection(victim, false);
+		}
+	}
+	return HAM_IGNORED;
+}
+
+// 最后一个僵尸被击杀重生
+last_zombie_respawn(client, bool:ghost)
+{
+	g_last_zombie = client;
+	zp_core_respawn_as_zombie(client, true);
+	respawn_player_manually(client);
+	if(ghost){zp_class_ghost_set(client, client);}
+	else{zp_core_force_infect(client);}
+	zp_core_update_user_state(client, 0);
+}
+
+// Send Death Message for zombie
+SendDeathMsg(attacker, victim, bool:headshot = false)
+{
+	message_begin(MSG_BROADCAST, g_MsgDeathMsg)
+	write_byte(attacker) // killer
+	write_byte(victim) // victim
+	write_byte(headshot?1:0) // headshot flag
+	
+	// killer's weapon
+	new weapon_name[32], truncated[32];
+	new weapon = cs_get_user_weapon(attacker);
+	get_weaponname(weapon, weapon_name, charsmax(weapon_name));
+	new index = 0;
+	for(new i = strlen("weapon_"); i < charsmax(weapon_name); i++)
+	{
+		truncated[index] = weapon_name[i];
+		index++;
+	}
+	write_string(truncated);
+	
+	message_end()
+}
+
+// Update Player Frags and Deaths
+UpdateFrags(attacker, victim, frags, deaths, scoreboard)
+{
+	// Set attacker frags
+	set_pev(attacker, pev_frags, float(pev(attacker, pev_frags) + frags))
+	
+	// Set victim deaths
+	cs_set_user_deaths(victim, cs_get_user_deaths(victim) + deaths, false);
+	
+	// Update scoreboard with attacker and victim info
+	if (scoreboard)
+	{
+		zp_core_update_user_scoreboard(attacker);
+		zp_core_update_user_scoreboard(victim);
 	}
 }
 
@@ -286,7 +373,7 @@ last_man_infection(client, bool:ghost)
 	WritePackFloat(dp, v_angle[2]);
 	ResetPack(dp, false);
 	
-	g_LastMan = client;
+	g_last_human = client;
 	zp_core_respawn_as_zombie(client, true);
 	RequestFrame("teleport_last_man", dp);
 }
@@ -308,7 +395,7 @@ public teleport_last_man(DataPack:dp)
 	v_angles[2] = ReadPackFloat(dp);
 	DestroyDataPack(dp);
 	
-	if(1 <= client <= g_MaxPlayers && is_user_connected(client) && !is_user_alive(client))
+	if(is_user_valid(client) && !is_user_alive(client))
 	{
 		cs_user_spawn(client);
 		
@@ -319,6 +406,7 @@ public teleport_last_man(DataPack:dp)
 		
 		teleport_user(client, origin, angles, v_angles);
 	}
+	zp_core_update_user_state(client, 0);
 }
 
 // 传送玩家到指定位置
@@ -546,9 +634,14 @@ public message_health(msg_id, msg_dest, msg_entity)
 public message_clcorpse(msg_id, msg_dest, msg_entity)
 {
 	new client = get_msg_arg_int(12);
-	if(get_pcvar_num(cvar_last_man_infection) > 0 && g_MaxPlayers >= g_LastMan >= 1 && g_LastMan == client)
+	if(get_pcvar_num(cvar_last_man_infection) > 0 && g_MaxPlayers >= g_last_human >= 1 && g_last_human == client)
 	{
-		g_LastMan = -1;
+		g_last_human = -1;
+		return PLUGIN_HANDLED;
+	}
+	if(get_pcvar_num(cvar_last_man_infection) > 0 && g_MaxPlayers >= g_last_zombie >= 1 && g_last_zombie == client)
+	{
+		g_last_zombie = -1;
 		return PLUGIN_HANDLED;
 	}
 	return PLUGIN_CONTINUE;
@@ -639,4 +732,9 @@ GetRandomAlive(target_index)
 	}
 	
 	return -1;
+}
+
+bool:is_user_valid(id)
+{
+	return (1 <= id <= g_MaxPlayers && is_user_connected(id));
 }

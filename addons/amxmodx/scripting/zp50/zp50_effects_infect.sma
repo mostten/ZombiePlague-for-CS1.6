@@ -37,7 +37,7 @@ const UNIT_SECOND = (1<<12)
 const FFADE_IN = 0x0000
 
 new g_HudSync
-new g_MsgDeathMsg, g_MsgScoreAttrib
+new g_MsgDeathMsg
 new g_MsgScreenShake, g_MsgDamage
 
 new cvar_infect_show_hud
@@ -59,7 +59,6 @@ public plugin_init()
 	g_HudSync = CreateHudSyncObj()
 	
 	g_MsgDeathMsg = get_user_msgid("DeathMsg")
-	g_MsgScoreAttrib = get_user_msgid("ScoreAttrib")
 	g_MsgScreenShake = get_user_msgid("ScreenShake")
 	g_MsgDamage = get_user_msgid("Damage")
 	
@@ -151,7 +150,7 @@ public zp_fw_core_infect_post(id, attacker)
 			{
 				// Send death notice and fix the "dead" attrib on scoreboard
 				SendDeathMsg(attacker, id)
-				FixDeadAttrib(id)
+				zp_core_update_user_state(id, 0)
 			}
 		}
 	}
@@ -254,14 +253,5 @@ SendDeathMsg(attacker, victim)
 	write_byte(victim) // victim
 	write_byte(1) // headshot flag
 	write_string("infection") // killer's weapon
-	message_end()
-}
-
-// Fix Dead Attrib on scoreboard
-FixDeadAttrib(id)
-{
-	message_begin(MSG_BROADCAST, g_MsgScoreAttrib)
-	write_byte(id) // id
-	write_byte(0) // attrib
 	message_end()
 }

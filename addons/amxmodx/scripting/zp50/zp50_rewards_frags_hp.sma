@@ -30,7 +30,6 @@
 const PDATA_SAFE = 2
 const OFFSET_CSDEATHS = 444
 
-new g_MsgScoreInfo
 new g_LastHumanHealthRewarded
 new g_GameModeStarted
 
@@ -45,8 +44,6 @@ new cvar_human_last_health_bonus
 public plugin_init()
 {
 	register_plugin("[ZP] Rewards: Frags & HP", ZP_VERSION_STRING, "ZP Dev Team")
-	
-	g_MsgScoreInfo = get_user_msgid("ScoreInfo")
 	
 	RegisterHam(Ham_Killed, "player", "fw_PlayerKilled")
 	RegisterHamBots(Ham_Killed, "fw_PlayerKilled")
@@ -186,21 +183,8 @@ UpdateFrags(attacker, victim, frags, deaths, scoreboard)
 	// Update scoreboard with attacker and victim info
 	if (scoreboard)
 	{
-		message_begin(MSG_BROADCAST, g_MsgScoreInfo)
-		write_byte(attacker) // id
-		write_short(pev(attacker, pev_frags)) // frags
-		write_short(cs_get_user_deaths(attacker)) // deaths
-		write_short(0) // class?
-		write_short(_:cs_get_user_team(attacker)) // team
-		message_end()
-		
-		message_begin(MSG_BROADCAST, g_MsgScoreInfo)
-		write_byte(victim) // id
-		write_short(pev(victim, pev_frags)) // frags
-		write_short(cs_get_user_deaths(victim)) // deaths
-		write_short(0) // class?
-		write_short(_:cs_get_user_team(victim)) // team
-		message_end()
+		zp_core_update_user_scoreboard(attacker);
+		zp_core_update_user_scoreboard(victim);
 	}
 }
 

@@ -215,3 +215,18 @@ forward zp_fw_core_set_screenfade_pre(id, duration, hold_time, fade_type, red, g
  * @param alpha			Color alpha.
  */
 forward zp_fw_core_set_screenfade_post(id, duration, hold_time, fade_type, red, green, blue, alpha);
+
+/**
+ * Update player life state.
+ *
+ * @param id			Player index.
+ * @param user_state	Player state. 0 - nothing, 1 - dead, 2 - bomb
+ */
+native zp_core_update_user_state(id, user_state);
+
+/**
+ * Update player scoreboard.
+ *
+ * @param id			Player index.
+ */
+native zp_core_update_user_scoreboard(id);

@@ -44,6 +44,8 @@ enum _:TOTAL_FORWARDS
 
 new g_MaxPlayers
 new g_MsgScreenFade;
+new g_MsgScoreAttrib;
+new g_MsgScoreInfo;
 new g_IsZombie
 new g_IsFirstZombie
 new g_IsLastZombie
@@ -88,6 +90,8 @@ public plugin_init()
 	
 	g_MaxPlayers = get_maxplayers()
 	g_MsgScreenFade = get_user_msgid("ScreenFade");
+	g_MsgScoreAttrib = get_user_msgid("ScoreAttrib");
+	g_MsgScoreInfo = get_user_msgid("ScoreInfo");
 	
 	// To help players find ZP servers
 	register_cvar("zp_version", ZP_VERSION_STR_LONG, FCVAR_SERVER|FCVAR_SPONLY)
@@ -120,6 +124,8 @@ public plugin_natives()
 	register_native("zp_core_respawn_as_zombie", "native_core_respawn_as_zombie")
 	register_native("zp_core_set_screenfade", "native_core_set_screenfade");
 	register_native("zp_core_set_lightstyle", "native_core_set_lightstyle");
+	register_native("zp_core_update_user_state", "native_core_update_user_state");
+	register_native("zp_core_update_user_scoreboard", "native_update_user_scoreboard");
 }
 
 public fw_ClientDisconnect_Post(id)
@@ -498,6 +504,38 @@ set_user_lightstyle(client, const light_style[ZP_LIGHTSTYLE_LENGTH], bool:call_f
 	
 	if(call_forward)
 		ExecuteForward(g_Forwards[FW_SET_USER_LIGHTSTYLE_POST], g_ForwardResult, client, light_style);
+}
+
+public native_core_update_user_state(plugin_id, num_params)
+{
+	new id = get_param(1);
+	new user_state = get_param(2);
+	update_user_state(id, user_state);
+}
+
+update_user_state(client, user_state)
+{
+	message_begin(MSG_BROADCAST, g_MsgScoreAttrib);
+	write_byte(client); // id
+	write_byte(user_state); // 0 - nothing, 1 - dead, 2 - bomb 
+	message_end();
+}
+
+public native_update_user_scoreboard(plugin_id, num_params)
+{
+	new id = get_param(1);
+	update_user_scoreboard(id);
+}
+
+update_user_scoreboard(client)
+{
+	message_begin(MSG_BROADCAST, g_MsgScoreInfo);
+	write_byte(client); // id
+	write_short(pev(client, pev_frags)); // frags
+	write_short(cs_get_user_deaths(client)); // deaths
+	write_short(0); // class?
+	write_short(_:cs_get_user_team(client)); // team
+	message_end();
 }
 
 // Get Zombie Count -returns alive zombies number-
