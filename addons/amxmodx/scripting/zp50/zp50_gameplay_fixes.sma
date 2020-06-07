@@ -243,15 +243,18 @@ public fw_TraceAttack_post(victim, attacker, Float:damage, Float:direction[3], t
 
 public fw_PlayerKilled(victim, attacker, shouldgib)
 {
-	// 攻击者不是玩家或者是被爆头
-	if(!is_user_valid(attacker) || g_user_headshot[victim]){return HAM_IGNORED;}
-	
-	// 重置爆头标识
-	g_user_headshot[victim] = false;
+	// 攻击者不是玩家
+	if(!is_user_valid(attacker)){return HAM_IGNORED;}
 	
 	// 修复最后一个僵尸不被爆头却结束本局
 	if (get_pcvar_num(cvar_zombie_headshot_die) > 0 && zp_core_is_last_zombie(victim) && !zp_core_is_zombie(attacker))
 	{
+		// 玩家被爆头
+		if(g_user_headshot[victim]){return HAM_IGNORED;}
+		
+		// 重置爆头标识
+		g_user_headshot[victim] = false;
+		
 		// 被击杀者为复仇者禁止此功能
 		if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(victim)){return HAM_IGNORED;}
 		
