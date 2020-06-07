@@ -664,50 +664,50 @@ public radio_menu_handle(client, menuid, item)
 		if(ArraySize(g_radio_sounds) > radio_info[RadioInfo_Sound] >= 0)
 			ArrayGetString(g_radio_sounds, radio_info[RadioInfo_Sound], sound, charsmax(sound));
 		
-		radio_send_team(radio_info[RadioInfo_Team], message, sound);
+		radio_send_team(client, radio_info[RadioInfo_Team], message, sound);
 	}
 	menu_destroy(menuid);
 	return PLUGIN_HANDLED;
 }
 
-message_send(client, const message[])
+message_send(client, sender, const message[])
 {
 	new szClient[3], szName[32];
-	num_to_str(client, szClient, charsmax(szClient));
-	get_user_name(client, szName, charsmax(szName))
+	num_to_str(sender, szClient, charsmax(szClient));
+	get_user_name(sender, szName, charsmax(szName))
 	emessage_begin(MSG_ONE_UNRELIABLE, g_msg_text_msg, .player=client);
-	ewrite_byte(PRINT_RADIO);
-	ewrite_string(szClient);
+	ewrite_byte(PRINT_RADIO); // Pitch
+	ewrite_string(szClient); // sender index converted to string
 	ewrite_string("#Game_radio");
-	ewrite_string(szName);
-	ewrite_string(message);
+	ewrite_string(szName); // sender name
+	ewrite_string(message); // message
 	emessage_end();
 }
 
 
-sound_send(client, const sound[])
+sound_send(client, sender, const sound[])
 {
 	emessage_begin(MSG_ONE_UNRELIABLE, g_msg_send_audio, .player=client);
-	ewrite_byte(client);
-	ewrite_string(sound);
-	ewrite_short(PITCH_RADIO);
+	ewrite_byte(sender); // Sender ID
+	ewrite_string(sound); // Audio Code
+	ewrite_short(PITCH_RADIO); // Pitch
 	emessage_end();
 }
 
-radio_send(client, const message[], const sound[])
+radio_send(client, sender, const message[], const sound[])
 {
 	if(strlen(message) > 0)
-		message_send(client, message);
+		message_send(client, sender, message);
 	if(strlen(sound) > 0)
-		sound_send(client, sound);
+		sound_send(client, sender, sound);
 }
 
-radio_send_team(RadioTeam:radio_team, const message[], const sound[])
+radio_send_team(sender, RadioTeam:radio_team, const message[], const sound[])
 {
 	for(new client = 1; client <= MAXPLAYERS; client++)
 	{
 		if(is_user_connected(client) && !is_user_bot(client) && is_user_alive(client) && get_user_radio_team(client) == radio_team)
-			radio_send(client, message, sound);
+			radio_send(client, sender, message, sound);
 	}
 }
 
