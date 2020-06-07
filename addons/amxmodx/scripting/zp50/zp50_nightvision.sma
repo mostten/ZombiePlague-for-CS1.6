@@ -29,6 +29,7 @@
 #define TASK_SCREENFADE 200
 #define ID_SCREENFADE (taskid - TASK_SCREENFADE)
 
+const UNIT_SECOND = (1<<12);
 const FFADE_IN = 0x0000;
 const FFADE_STAYOUT = 0x0004;
 
@@ -361,7 +362,7 @@ public message_screenfade(msg_id, msg_dest, msg_entity)
 	if(get_pcvar_num(cvar_nvision_custom) == 2)
 	{
 		remove_task(msg_entity+TASK_SCREENFADE);
-		set_task(get_msg_arg_int(1) / 4096.0, "restore_screenfade_task", msg_entity+TASK_SCREENFADE);
+		set_task(get_msg_arg_int(1)/UNIT_SECOND*1.0, "restore_screenfade_task", msg_entity+TASK_SCREENFADE);
 	}
 	return PLUGIN_CONTINUE;
 }

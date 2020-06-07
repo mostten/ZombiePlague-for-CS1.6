@@ -22,9 +22,10 @@ new const ZP_SETTINGS_FILE[] = "zombieplague.ini"
 
 // Defaults
 new const sky_names[][] = { "space" }
-new const thunder_lights[][] = { "ijklmnonmlkjihgfedcb" , "klmlkjihgfedcbaabcdedcb" , "bcdefedcijklmlkjihgfedcb" }
-new const map_lights[][] = { "b", "c" , "" , "d" }
+new const thunder_mapstyles[][] = { "ijklmnonmlkjihgfedcb" , "klmlkjihgfedcbaabcdedcb" , "bcdefedcijklmlkjihgfedcb" }
+new const config_mapstyles[][] = { "b", "c" , "" , "d" }
 new const sound_thunder[][] = { "zombie_plague/thunder1.wav" , "zombie_plague/thunder2.wav" }
+new const map_styles[] = "abcdefghijklmnopqrstuvwxyz ";
 
 #define MAXPLAYERS 32
 #define SOUND_MAX_LENGTH 64
@@ -103,16 +104,16 @@ public plugin_precache()
 	}
 	if (ArraySize(g_thunder_lights) == 0)
 	{
-		for (index = 0; index < sizeof thunder_lights; index++)
-			ArrayPushString(g_thunder_lights, thunder_lights[index])
+		for (index = 0; index < sizeof thunder_mapstyles; index++)
+			ArrayPushString(g_thunder_lights, thunder_mapstyles[index])
 		
 		// Save to external file
 		amx_save_setting_string_arr(ZP_SETTINGS_FILE, "Lightning Lights Cycle", "LIGHTS", g_thunder_lights)
 	}
 	if (ArraySize(g_map_lights) == 0)
 	{
-		for (index = 0; index < sizeof map_lights; index++)
-			ArrayPushString(g_map_lights, map_lights[index])
+		for (index = 0; index < sizeof config_mapstyles; index++)
+			ArrayPushString(g_map_lights, config_mapstyles[index])
 		
 		// Save to external file
 		amx_save_setting_string_arr(ZP_SETTINGS_FILE, "Map Lights Cycle", "LIGHTS", g_map_lights)
@@ -269,12 +270,12 @@ public thunder_task()
 		case 0:{set_lightstyle(lighting);}
 		case 1:
 		{
-			if(get_light_level(lighting) >= get_light_level(g_MapLight))
+			if(get_mapstyle_level(lighting) >= get_mapstyle_level(g_MapLight))
 				set_lightstyle(lighting);
 		}
 		default:
 		{
-			if(get_light_level(lighting) >= get_light_level(lighting_config))
+			if(get_mapstyle_level(lighting) >= get_mapstyle_level(lighting_config))
 				set_lightstyle(lighting);
 		}
 	}
@@ -352,61 +353,9 @@ set_lightstyle(const light_style[ZP_LIGHTSTYLE_LENGTH])
 	}
 }
 
-get_light_level(light[ZP_LIGHTSTYLE_LENGTH])
+get_mapstyle_level(const light[ZP_LIGHTSTYLE_LENGTH])
 {
-	if(tolower(light[0]) == 'a')
-		return 1;
-	else if(tolower(light[0]) == 'b')
-		return 2;
-	else if(tolower(light[0]) == 'c')
-		return 3;
-	else if(tolower(light[0]) == 'd')
-		return 4;
-	else if(tolower(light[0]) == 'e')
-		return 5;
-	else if(tolower(light[0]) == 'f')
-		return 6;
-	else if(tolower(light[0]) == 'g')
-		return 7;
-	else if(tolower(light[0]) == 'h')
-		return 8;
-	else if(tolower(light[0]) == 'i')
-		return 9;
-	else if(tolower(light[0]) == 'j')
-		return 10;
-	else if(tolower(light[0]) == 'k')
-		return 11;
-	else if(tolower(light[0]) == 'l')
-		return 12;
-	else if(tolower(light[0]) == 'm')
-		return 13;
-	else if(tolower(light[0]) == 'n')
-		return 14;
-	else if(tolower(light[0]) == 'o')
-		return 15;
-	else if(tolower(light[0]) == 'p')
-		return 16;
-	else if(tolower(light[0]) == 'q')
-		return 17;
-	else if(tolower(light[0]) == 'r')
-		return 18;
-	else if(tolower(light[0]) == 's')
-		return 19;
-	else if(tolower(light[0]) == 't')
-		return 20;
-	else if(tolower(light[0]) == 'u')
-		return 21;
-	else if(tolower(light[0]) == 'v')
-		return 22;
-	else if(tolower(light[0]) == 'w')
-		return 23;
-	else if(tolower(light[0]) == 'x')
-		return 24;
-	else if(tolower(light[0]) == 'y')
-		return 25;
-	else if(tolower(light[0]) == 'z')
-		return 26;
-	else if(equal(light, ""))
-		return 27;
+	for(new style_level = 0; style_level < charsmax(map_styles); style_level++)
+		if(tolower(light[0]) == map_styles[style_level]){return style_level;}
 	return 0;
 }
