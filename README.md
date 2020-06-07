@@ -30,7 +30,9 @@
 
 12.新增人类僵尸等注册无线电音效接口
 
-12.增强夜视仪显示效果,优化增加FPS(zp_nvision_custom值为2时启用)
+13.增强夜视仪显示效果,优化增加FPS(zp_nvision_custom值为2时启用)
+
+14.增加僵尸未被爆头重生(zp_zombie_headshot_die值为1启用)
 
 新增服务器指令:
 
@@ -63,6 +65,8 @@
 14.zp_last_man_infection:最后一个人是否感染
 
 15.zp_lighting_chance: 在雨天每局闪电出现的几率(1或者更大的整数值，值越大几率越低)
+
+16.zp_zombie_headshot_die: 增加僵尸未被爆头重生(1打开,0关闭)
 
 新增配置文件:
 

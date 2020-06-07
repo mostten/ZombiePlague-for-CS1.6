@@ -60,7 +60,9 @@ new g_ForwardResult
 new g_MaxPlayers
 new g_HudSync
 
-new cvar_gamemode_delay, cvar_round_start_show_hud, cvar_prevent_consecutive, cvar_last_man_infection
+new cvar_gamemode_delay, cvar_round_start_show_hud,
+	cvar_prevent_consecutive, cvar_last_man_infection,
+	cvar_zombie_headshot_die;
 
 // Game Modes data
 new Array:g_GameModeName
@@ -111,6 +113,7 @@ public plugin_init()
 	cvar_round_start_show_hud = register_cvar("zp_round_start_show_hud", "1")
 	cvar_prevent_consecutive = register_cvar("zp_prevent_consecutive_modes", "1")
 	cvar_last_man_infection = register_cvar("zp_last_man_infection", "1")
+	cvar_zombie_headshot_die = register_cvar("zp_zombie_headshot_die", "1")
 	
 	g_Forwards[FW_GAME_MODE_CHOOSE_PRE] = CreateMultiForward("zp_fw_gamemodes_choose_pre", ET_CONTINUE, FP_CELL, FP_CELL)
 	g_Forwards[FW_GAME_MODE_CHOOSE_POST] = CreateMultiForward("zp_fw_gamemodes_choose_post", ET_IGNORE, FP_CELL, FP_CELL)
@@ -156,6 +159,30 @@ public native_filter(const name[], index, trap)
 		return PLUGIN_HANDLED;
 		
 	return PLUGIN_CONTINUE;
+}
+
+public client_death(killer, victim, wpnindex, hitplace, TK)
+{
+	// convar off or head shot or kill self
+	if (get_pcvar_num(cvar_zombie_headshot_die) <= 0 || hitplace == HIT_HEAD || killer == victim){return;}
+	
+	// victim isn't zombie
+	if(!zp_core_is_zombie(victim) || zp_core_is_last_zombie(victim)){return;}
+	
+	// victim is ghost
+	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(victim)){return;}
+	
+	// victim is nemesis
+	if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(victim)){return;}
+	
+	// respawn as zombie
+	zp_core_respawn_as_zombie(victim, true);
+	
+	// respawn victim
+	ExecuteHamB(Ham_CS_RoundRespawn, victim);
+	
+	//update victim life state
+	zp_core_update_user_state(victim, 0);
 }
 
 public native_gamemodes_register(plugin_id, num_params)
@@ -503,7 +530,7 @@ public fw_PlayerKilled_Post(victim, attacker, shouldgib)
 }
 
 // Ham Trace Attack Forward
-public fw_TraceAttack(victim, attacker)
+public fw_TraceAttack(victim, attacker, Float:damage, Float:direction[3], tracehandle, damage_type)
 {
 	// Non-player damage or self damage
 	if (victim == attacker || !is_user_alive(attacker))
