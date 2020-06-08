@@ -711,12 +711,15 @@ radio_send_team(sender, RadioTeam:radio_team, const message[], const sound[])
 	}
 }
 
-public message_sendaudio(msg_id, msg_dest, client)
+public message_sendaudio(msg_id, msg_dest, msg_entity)
 {
+	new sender = get_msg_arg_int(1);
+	if(!is_user_valid(sender)){return PLUGIN_CONTINUE;}
+	
 	new sound[SOUND_MAX_LENGTH], replace[SOUND_MAX_LENGTH];
 	get_msg_arg_string(2, sound, charsmax(sound))
 	
-	if(StrContains(sound, "%!MRAD_") == 0 && get_replace_sound(sound, get_user_radio_team(client), get_user_radio_class(client), replace))
+	if(StrContains(sound, "%!MRAD_") == 0 && get_replace_sound(sound, get_user_radio_team(sender), get_user_radio_class(sender), replace))
 	{
 		if(!equal(sound, replace))
 			set_msg_arg_string(2, replace);
