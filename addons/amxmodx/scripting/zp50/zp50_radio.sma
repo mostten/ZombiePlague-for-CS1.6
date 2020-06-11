@@ -15,7 +15,6 @@
 #define NAME_MAX_LENGTH 128
 #define SOUND_MAX_LENGTH 64
 #define MESSAGE_MAX_LENGTH 256
-#define MAXPLAYERS 32
 #define PRINT_RADIO 5
 #define PITCH_RADIO 100
 
@@ -704,7 +703,7 @@ radio_send(client, sender, const message[], const sound[])
 
 radio_send_team(sender, RadioTeam:radio_team, const message[], const sound[])
 {
-	for(new client = 1; client <= MAXPLAYERS; client++)
+	for(new client = 1; client <= g_MaxPlayers; client++)
 	{
 		if(is_user_connected(client) && !is_user_bot(client) && is_user_alive(client) && get_user_radio_team(client) == radio_team)
 			radio_send(client, sender, message, sound);

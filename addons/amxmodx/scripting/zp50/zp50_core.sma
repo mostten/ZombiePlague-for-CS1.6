@@ -46,6 +46,7 @@ new g_MaxPlayers
 new g_MsgScreenFade;
 new g_MsgScoreAttrib;
 new g_MsgScoreInfo;
+new g_MsgDeathMsg;
 new g_IsZombie
 new g_IsFirstZombie
 new g_IsLastZombie
@@ -92,6 +93,7 @@ public plugin_init()
 	g_MsgScreenFade = get_user_msgid("ScreenFade");
 	g_MsgScoreAttrib = get_user_msgid("ScoreAttrib");
 	g_MsgScoreInfo = get_user_msgid("ScoreInfo");
+	g_MsgDeathMsg = get_user_msgid("DeathMsg");
 	
 	// To help players find ZP servers
 	register_cvar("zp_version", ZP_VERSION_STR_LONG, FCVAR_SERVER|FCVAR_SPONLY)
@@ -126,6 +128,7 @@ public plugin_natives()
 	register_native("zp_core_set_lightstyle", "native_core_set_lightstyle");
 	register_native("zp_core_update_user_state", "native_core_update_user_state");
 	register_native("zp_core_update_user_scoreboard", "native_update_user_scoreboard");
+	register_native("zp_core_send_death_msg", "native_core_send_death_msg");
 }
 
 public fw_ClientDisconnect_Post(id)
@@ -535,6 +538,43 @@ update_user_scoreboard(client)
 	write_short(cs_get_user_deaths(client)); // deaths
 	write_short(0); // class?
 	write_short(_:cs_get_user_team(client)); // team
+	message_end();
+}
+
+public native_core_send_death_msg(plugin_id, num_params)
+{
+	new attacker = get_param(1);
+	new victim = get_param(2);
+	new bool:headshot = bool:get_param(3);
+	new killer_weapon[32];
+	get_string(4, killer_weapon, charsmax(killer_weapon));
+	
+	send_death_msg(attacker, victim, headshot, killer_weapon);
+}
+
+// Send Death Message
+send_death_msg(attacker, victim, bool:headshot = false, const killer_weapon[] = "")
+{
+	message_begin(MSG_BROADCAST, g_MsgDeathMsg);
+	write_byte(attacker); // killer
+	write_byte(victim); // victim
+	write_byte(headshot?1:0); // headshot flag
+	
+	// killer's weapon
+	if(!strlen(killer_weapon))
+	{
+		new weapon_name[32], truncated[32];
+		new weapon = cs_get_user_weapon(attacker);
+		get_weaponname(weapon, weapon_name, charsmax(weapon_name));
+		new index = 0;
+		for(new i = strlen("weapon_"); i < charsmax(weapon_name); i++)
+		{
+			truncated[index] = weapon_name[i];
+			index++;
+		}
+		write_string(truncated);
+	}else{write_string(killer_weapon);}
+	
 	message_end();
 }
 

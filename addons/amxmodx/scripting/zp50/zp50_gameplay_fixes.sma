@@ -60,7 +60,6 @@ new cvar_keep_hp_on_disconnect
 new cvar_last_man_infection
 new cvar_zombie_headshot_die
 new cvar_frags_zombie_killed
-new g_MsgDeathMsg
 new bool:g_user_headshot[32]
 
 public plugin_init()
@@ -97,7 +96,6 @@ public plugin_init()
 	
 	register_message(get_user_msgid("Health"), "message_health")
 	register_message(get_user_msgid ("ClCorpse"), "message_clcorpse")
-	g_MsgDeathMsg = get_user_msgid("DeathMsg")
 	
 	g_MaxPlayers = get_maxplayers()
 }
@@ -264,7 +262,7 @@ public fw_PlayerKilled(victim, attacker, shouldgib)
 		// 更新玩家死亡和积分信息
 		new frags = get_pcvar_num(cvar_frags_zombie_killed);
 		UpdateFrags(attacker, victim, (frags > 0)?frags:0, 1, 1);
-		SendDeathMsg(attacker, victim, false);
+		zp_core_send_death_msg(attacker, victim, false, "");
 		
 		// 重生玩家
 		last_zombie_respawn(victim, false);
@@ -312,29 +310,6 @@ last_zombie_respawn(client, bool:ghost)
 	if(ghost){zp_class_ghost_set(client, client);}
 	else{zp_core_force_infect(client);}
 	zp_core_update_user_state(client, 0);
-}
-
-// Send Death Message for zombie
-SendDeathMsg(attacker, victim, bool:headshot = false)
-{
-	message_begin(MSG_BROADCAST, g_MsgDeathMsg)
-	write_byte(attacker) // killer
-	write_byte(victim) // victim
-	write_byte(headshot?1:0) // headshot flag
-	
-	// killer's weapon
-	new weapon_name[32], truncated[32];
-	new weapon = cs_get_user_weapon(attacker);
-	get_weaponname(weapon, weapon_name, charsmax(weapon_name));
-	new index = 0;
-	for(new i = strlen("weapon_"); i < charsmax(weapon_name); i++)
-	{
-		truncated[index] = weapon_name[i];
-		index++;
-	}
-	write_string(truncated);
-	
-	message_end()
 }
 
 // Update Player Frags and Deaths

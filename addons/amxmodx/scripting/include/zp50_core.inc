@@ -230,3 +230,13 @@ native zp_core_update_user_state(id, user_state);
  * @param id			Player index.
  */
 native zp_core_update_user_scoreboard(id);
+
+/**
+ * Send a player death message.
+ *
+ * @param attacker			Attacker index.
+ * @param victim			Victim index.
+ * @param headshot			Headshot flag.
+ * @param killer_weapon		Killer weapon, use attacker weapon when "" string.
+ */
+native zp_core_send_death_msg(attacker, victim, bool:headshot = false, const killer_weapon[] = "");
