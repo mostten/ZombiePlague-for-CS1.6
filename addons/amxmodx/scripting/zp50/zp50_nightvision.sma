@@ -369,7 +369,8 @@ public message_screenfade(msg_id, msg_dest, msg_entity)
 
 public zp_fw_core_set_screenfade_post(id, duration, hold_time, fade_type, red, green, blue, alpha)
 {
-	RequestFrame("restore_screenfade_task", id+TASK_SCREENFADE);
+	remove_task(id+TASK_SCREENFADE);
+	set_task(duration/UNIT_SECOND*1.0, "restore_screenfade_task", id+TASK_SCREENFADE);
 }
 
 // Custom Night Vision Task
