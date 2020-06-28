@@ -20,14 +20,14 @@ CMD_NOT_GCLASSES = Ghost Classes are disabled.
 GHOST_MENU_ADMIN = Make Ghost
 CLASS_GHOST = Ghost
 
-ROUND_COUNTDOWN_Infection Mode = Biochemical virus is looking for host in %d seconds.
-ROUND_COUNTDOWN_Multiple Infection Mode = Biochemical virus is looking for host in %d seconds.
-ROUND_COUNTDOWN_Swarm Mode = Biochemical virus is looking for host in %d seconds.
-ROUND_COUNTDOWN_Nemesis Mode = Biochemical virus is looking for host in %d seconds.
-ROUND_COUNTDOWN_Survivor Mode = Biochemical virus is looking for host in %d seconds.
-ROUND_COUNTDOWN_Plague Mode = Biochemical virus is looking for host in %d seconds.
-ROUND_COUNTDOWN_Armageddon Mode = Biochemical virus is looking for host in %d seconds.
-ROUND_COUNTDOWN_Ghost Mode = Ghost will appear in %d seconds.
+ROUND_COUNTDOWN (Infection Mode) = Biochemical virus is looking for host in %d seconds.
+ROUND_COUNTDOWN (Multiple Infection Mode) = Biochemical virus is looking for host in %d seconds.
+ROUND_COUNTDOWN (Swarm Mode) = Biochemical virus is looking for host in %d seconds.
+ROUND_COUNTDOWN (Nemesis Mode) = Biochemical virus is looking for host in %d seconds.
+ROUND_COUNTDOWN (Survivor Mode) = Biochemical virus is looking for host in %d seconds.
+ROUND_COUNTDOWN (Plague Mode) = Biochemical virus is looking for host in %d seconds.
+ROUND_COUNTDOWN (Armageddon Mode) = Biochemical virus is looking for host in %d seconds.
+ROUND_COUNTDOWN (Ghost Mode) = Ghost will appear in %d seconds.
 
 [cn]
 GHOST_NOTICE_FIRST = %s 是第一个恶灵...
@@ -40,7 +40,7 @@ GHOST_SELECT = 下一次你被感染时是:
 GHOST_ATTRIB1 = 生命值
 GHOST_ATTRIB2 = 速度
 GHOST_ATTRIB3 = 重力
-GHOST_ATTRIB4 = 反彈力
+GHOST_ATTRIB4 = 击退
 
 MENU_GCLASS = 选择恶灵类型
 ALREADY_GHOST = 玩家已经是幽灵
@@ -51,12 +51,12 @@ CMD_NOT_GCLASSES = 恶灵类型被禁止使用.
 GHOST_MENU_ADMIN = 成为恶灵
 CLASS_GHOST = 恶灵
 
-ROUND_COUNTDOWN_Infection Mode = 生化病毒正在寻找宿主, 剩余 %d 秒.
-ROUND_COUNTDOWN_Multiple Infection Mode = 生化病毒正在寻找宿主, 剩余 %d 秒.
-ROUND_COUNTDOWN_Swarm Mode = 生化病毒正在寻找宿主, 剩余 %d 秒.
-ROUND_COUNTDOWN_Nemesis Mode = 生化病毒正在寻找宿主, 剩余 %d 秒.
-ROUND_COUNTDOWN_Survivor Mode = 生化病毒正在寻找宿主, 剩余 %d 秒.
-ROUND_COUNTDOWN_Plague Mode = 生化病毒正在寻找宿主, 剩余 %d 秒.
-ROUND_COUNTDOWN_Armageddon Mode = 生化病毒正在寻找宿主, 剩余 %d 秒.
-ROUND_COUNTDOWN_Ghost Mode = 恶灵将在 %d 秒后出现.
+ROUND_COUNTDOWN (Infection Mode) = 生化病毒正在寻找宿主, 剩余 %d 秒.
+ROUND_COUNTDOWN (Multiple Infection Mode) = 生化病毒正在寻找宿主, 剩余 %d 秒.
+ROUND_COUNTDOWN (Swarm Mode) = 生化病毒正在寻找宿主, 剩余 %d 秒.
+ROUND_COUNTDOWN (Nemesis Mode) = 生化病毒正在寻找宿主, 剩余 %d 秒.
+ROUND_COUNTDOWN (Survivor Mode) = 生化病毒正在寻找宿主, 剩余 %d 秒.
+ROUND_COUNTDOWN (Plague Mode) = 生化病毒正在寻找宿主, 剩余 %d 秒.
+ROUND_COUNTDOWN (Armageddon Mode) = 生化病毒正在寻找宿主, 剩余 %d 秒.
+ROUND_COUNTDOWN (Ghost Mode) = 恶灵将在 %d 秒后出现.
 

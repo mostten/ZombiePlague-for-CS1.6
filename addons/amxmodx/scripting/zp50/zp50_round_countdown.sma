@@ -317,7 +317,7 @@ get_message_lang(game_mode_id, message_lang[], maxsize)
 {
 	new modename[32];
 	zp_gamemodes_get_name(game_mode_id, modename, charsmax(modename));
-	formatex(message_lang, maxsize, "ROUND_COUNTDOWN_%s", modename);
+	formatex(message_lang, maxsize, "ROUND_COUNTDOWN (%s)", modename);
 	if(GetLangTransKey(message_lang) == TransKey_Bad)
 	{
 		new TransKey:key = CreateLangKey(message_lang);
