@@ -17,9 +17,9 @@
 
 // Settings file
 new const ZP_SETTINGS_FILE[] = "zombieplague.ini";
-new const FOG_CHANCE = 2;
 
 #define FOG_VALUE_MAX_LENGTH 16
+#define FOG_COLOR_DEAFULT "128 128 128"
 
 new g_fwSpawn;
 new g_ambience_random = 1;
@@ -27,7 +27,7 @@ new g_ambience_rain = 1;
 new g_ambience_snow = 1;
 new g_ambience_fog = 1;
 new g_ambience_fog_density[FOG_VALUE_MAX_LENGTH] = "0.0018";
-new g_ambience_fog_color[FOG_VALUE_MAX_LENGTH] = "128 128 128";
+new Array:g_ambience_fog_color;
 new const g_ambience_ents[][] = { "env_fog", "env_rain", "env_snow" };
 
 new g_msg_fog, g_msg_recieve;
@@ -48,11 +48,19 @@ public plugin_init()
 
 public plugin_precache()
 {
+	fog_arrays_initialize();
+	
 	// Load from external file, save if not found
 	if (!amx_load_setting_string(ZP_SETTINGS_FILE, "Weather Effects", "FOG DENSITY", g_ambience_fog_density, charsmax(g_ambience_fog_density)))
 		amx_save_setting_string(ZP_SETTINGS_FILE, "Weather Effects", "FOG DENSITY", g_ambience_fog_density)
-	if (!amx_load_setting_string(ZP_SETTINGS_FILE, "Weather Effects", "FOG COLOR", g_ambience_fog_color, charsmax(g_ambience_fog_color)))
-		amx_save_setting_string(ZP_SETTINGS_FILE, "Weather Effects", "FOG COLOR", g_ambience_fog_color)
+	
+	//Fog color
+	amx_load_setting_string_arr(ZP_SETTINGS_FILE, "Weather Effects", "FOG COLOR", g_ambience_fog_color)
+	if (ArraySize(g_ambience_fog_color) < 1)
+	{
+		add_fog_to_array(FOG_COLOR_DEAFULT);
+		amx_save_setting_string_arr(ZP_SETTINGS_FILE, "Weather Effects", "FOG COLOR", g_ambience_fog_color);
+	}
 	
 	if (!amx_load_setting_int(ZP_SETTINGS_FILE, "Weather Effects", "FOG", g_ambience_fog))
 		amx_save_setting_int(ZP_SETTINGS_FILE, "Weather Effects", "FOG", g_ambience_fog)
@@ -63,15 +71,6 @@ public plugin_precache()
 	if (!amx_load_setting_int(ZP_SETTINGS_FILE, "Weather Effects", "RANDOM", g_ambience_random))
 		amx_save_setting_int(ZP_SETTINGS_FILE, "Weather Effects", "RANDOM", g_ambience_random)
 	
-	if (g_ambience_fog)
-	{
-		new ent = engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_fog"))
-		if (pev_valid(ent))
-		{
-			fm_set_kvd(ent, "density", g_ambience_fog_density, "env_fog")
-			fm_set_kvd(ent, "rendercolor", g_ambience_fog_color, "env_fog")
-		}
-	}
 	g_fwSpawn = register_forward(FM_Spawn, "fw_Spawn")
 	
 	ambience_create();
@@ -88,10 +87,45 @@ public native_ambience_get_weather(plugin_id, num_params)
 	return _:g_weather;
 }
 
+fog_arrays_initialize()
+{
+	if(g_ambience_fog_color == Invalid_Array)
+		g_ambience_fog_color = ArrayCreate(FOG_VALUE_MAX_LENGTH, 1);
+}
+
+add_fog_to_array(const fog_color_str[FOG_VALUE_MAX_LENGTH])
+{
+	if(strlen(fog_color_str))
+	{
+		fog_arrays_initialize();
+		
+		if(ArrayFindString(g_ambience_fog_color, fog_color_str) < 0)
+			return ArrayPushString(g_ambience_fog_color, fog_color_str);
+	}
+	return -1;
+}
+
+get_fog_color_random(fog_color_str[FOG_VALUE_MAX_LENGTH])
+{
+	if (ArraySize(g_ambience_fog_color) > 0)
+	{
+		new index = random_num(0, ArraySize(g_ambience_fog_color) - 1);
+		ArrayGetString(g_ambience_fog_color, index, fog_color_str, FOG_VALUE_MAX_LENGTH);
+		return index;
+	}
+	return -1;
+}
+
 ambience_create()
 {
 	engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_snow"));
 	engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_rain"));
+	new ent = engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_fog"))
+	if (pev_valid(ent))
+	{
+		fm_set_kvd(ent, "density", g_ambience_fog_density, "env_fog")
+		fm_set_kvd(ent, "rendercolor", FOG_COLOR_DEAFULT, "env_fog")
+	}
 }
 
 fog_create(const client = 0, const color_string[FOG_VALUE_MAX_LENGTH], const Float:density_f = 0.001, bool:clear = false)
@@ -155,11 +189,6 @@ Ambience_Weather:get_ambience_random()
 	return Weather_Sunny;
 }
 
-bool:has_fog()
-{
-	return (g_ambience_fog > 0 && random_num(1, FOG_CHANCE) == 1);
-}
-
 Ambience_Weather:get_ambience_config()
 {
 	if (g_ambience_random > 0)
@@ -191,13 +220,15 @@ get_ambience_config_count()
 // Event Round Start
 public event_round_start()
 {
-	if(has_fog())
-		fog_create(0, g_ambience_fog_color, str_to_float(g_ambience_fog_density), false);
+	new fog_color_str[FOG_VALUE_MAX_LENGTH];
+	get_fog_color_random(fog_color_str);
+	new bool:clear = g_ambience_fog < 1 || strlen(fog_color_str) < 1;
+	fog_create(0, fog_color_str, str_to_float(g_ambience_fog_density), clear);
 }
 
 public Event_RoundEnd()
 {
-	fog_create(0, g_ambience_fog_color, str_to_float(g_ambience_fog_density), true);
+	fog_create(0, FOG_COLOR_DEAFULT, str_to_float(g_ambience_fog_density), true);
 	switch(get_ambience_config())
 	{
 		case Weather_Rain:
