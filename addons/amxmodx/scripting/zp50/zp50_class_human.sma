@@ -88,6 +88,7 @@ new Array:g_HumanClassWeaponFile
 new Array:g_HumanClassWeaponHandle
 new Array:g_HumanClassAllowInfection
 new g_HumanClass[MAXPLAYERS+1]
+new g_HumanClassTemp[MAXPLAYERS+1]
 new g_HumanClassNext[MAXPLAYERS+1]
 new g_HumanMaxHealth[MAXPLAYERS+1]
 new g_HumanWeapon[MAXPLAYERS+1][32]
@@ -187,6 +188,7 @@ public plugin_natives()
 public client_putinserver(id)
 {
 	g_HumanClass[id] = ZP_INVALID_HUMAN_CLASS
+	g_HumanClassTemp[id] = ZP_INVALID_HUMAN_CLASS
 	g_HumanClassNext[id] = ZP_INVALID_HUMAN_CLASS
 }
 
@@ -325,27 +327,34 @@ public menu_humanclass(id, menuid, item)
 
 public zp_fw_core_cure_post(id, attacker)
 {
-	// Show human class menu if they haven't chosen any (e.g. just connected)
-	new random_classid = get_random_human(id);
-	if (g_HumanClassNext[id] == ZP_INVALID_HUMAN_CLASS)
+	if(g_HumanClassTemp[id] == ZP_INVALID_HUMAN_CLASS)
 	{
-		if (get_valid_class_count(id) > 1)
-			show_menu_humanclass(id);
-		else // If only one class is registered, choose it automatically
+		// Show human class menu if they haven't chosen any (e.g. just connected)
+		new random_classid = get_random_human(id);
+		if (g_HumanClassNext[id] == ZP_INVALID_HUMAN_CLASS)
+		{
+			if (get_valid_class_count(id) > 1)
+				show_menu_humanclass(id);
+			else // If only one class is registered, choose it automatically
+				g_HumanClassNext[id] = random_classid;
+		}
+		
+		// Bots pick class automatically
+		if (is_user_bot(id))
+		{
+			// Try choosing class
 			g_HumanClassNext[id] = random_classid;
+		}
+		
+		// Set selected human class. If none selected yet, use the first one
+		g_HumanClass[id] = g_HumanClassNext[id];
+		if (g_HumanClass[id] == ZP_INVALID_HUMAN_CLASS){g_HumanClass[id] = random_classid;}
 	}
-	
-	// Bots pick class automatically
-	if (is_user_bot(id))
+	else
 	{
-		// Try choosing class
-		g_HumanClassNext[id] = random_classid;
+		g_HumanClass[id] = g_HumanClassTemp[id];
+		g_HumanClassTemp[id] = ZP_INVALID_HUMAN_CLASS;
 	}
-	
-	// Set selected human class. If none selected yet, use the first one
-	g_HumanClass[id] = g_HumanClassNext[id];
-	if (g_HumanClass[id] == ZP_INVALID_HUMAN_CLASS){g_HumanClass[id] = random_classid;}
-	
 	// Apply human attributes
 	apply_human_info(id, g_HumanClass[id]);
 }
@@ -520,29 +529,12 @@ public native_class_human_set_current(plugin_id, num_params)
 		return false;
 	}
 	
+	g_HumanClassTemp[id] = classid;
+	
 	if(!zp_core_is_zombie(id)){zp_core_force_cure(id);}
 	else{zp_core_cure(id, id);}
 	
-	new DataPack:dp = CreateDataPack();
-	WritePackCell(dp, id);
-	WritePackCell(dp, classid);
-	ResetPack(dp, false);
-	
-	RequestFrame("apply_human_info_frame", dp);
-	
 	return true;
-}
-
-public apply_human_info_frame(DataPack:dp)
-{
-	new id = ReadPackCell(dp), classid = ReadPackCell(dp);
-	DestroyDataPack(dp);
-	
-	if(is_user_connected(id) && is_user_alive(id))
-	{
-		g_HumanClass[id] = classid;
-		apply_human_info(id, classid);
-	}
 }
 
 public native_class_human_get_next(plugin_id, num_params)
