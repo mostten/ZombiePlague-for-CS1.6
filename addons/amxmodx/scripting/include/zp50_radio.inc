@@ -69,12 +69,10 @@ enum RadioMenu{
 
 native bool:zp_radio_reg_zombie(const name[], bool:name_trans, const message[], bool:message_trans, const sound[], RadioMenu:radio_menu, classid);
 native bool:zp_radio_reg_human(const name[], bool:name_trans, const message[], bool:message_trans, const sound[], RadioMenu:radio_menu, classid);
-native bool:zp_radio_reg_ghost(const name[], bool:name_trans, const message[], bool:message_trans, const sound[], RadioMenu:radio_menu, classid);
 native bool:zp_radio_reg_nemesis(const name[], bool:name_trans, const message[], bool:message_trans, const sound[], RadioMenu:radio_menu);
 native bool:zp_radio_reg_survivor(const name[], bool:name_trans, const message[], bool:message_trans, const sound[], RadioMenu:radio_menu);
 
 native bool:zp_radio_replace_zombie(const search[] = RADIO_FIREINHOLE, const replace[], classid);
 native bool:zp_radio_replace_human(const search[] = RADIO_FIREINHOLE, const replace[], classid);
-native bool:zp_radio_replace_ghost(const search[] = RADIO_FIREINHOLE, const replace[], classid);
 native bool:zp_radio_replace_nemesis(const search[] = RADIO_FIREINHOLE, const replace[]);
 native bool:zp_radio_replace_survivor(const search[] = RADIO_FIREINHOLE, const replace[]);

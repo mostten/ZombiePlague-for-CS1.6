@@ -25,9 +25,17 @@
 #define HUD_EVENT_G 0
 #define HUD_EVENT_B 0
 
+enum _:TOTAL_FORWARDS
+{
+	FW_ROUND_STARTED = 0
+};
+new g_Forwards[TOTAL_FORWARDS];
+new g_ForwardResult;
+
 new g_MaxPlayers
 new g_HudSync
 new g_TargetPlayer
+new g_InfectionMode
 
 new cvar_infection_chance, cvar_infection_min_players
 new cvar_infection_show_hud
@@ -38,8 +46,8 @@ public plugin_precache()
 {
 	// Register game mode at precache (plugin gets paused after this)
 	register_plugin("[ZP] Game Mode: Infection", ZP_VERSION_STRING, "ZP Dev Team")
-	new game_mode_id = zp_gamemodes_register("Infection Mode")
-	zp_gamemodes_set_default(game_mode_id)
+	g_InfectionMode = zp_gamemodes_register("Infection Mode")
+	zp_gamemodes_set_default(g_InfectionMode)
 	
 	// Create the HUD Sync Objects
 	g_HudSync = CreateHudSyncObj()
@@ -52,19 +60,23 @@ public plugin_precache()
 	cvar_infection_allow_respawn = register_cvar("zp_infection_allow_respawn", "1")
 	cvar_respawn_after_last_human = register_cvar("zp_respawn_after_last_human", "1")
 	cvar_zombie_first_hp_multiplier = register_cvar("zp_zombie_first_hp_multiplier", "2.0")
+	
+	g_Forwards[FW_ROUND_STARTED] = CreateMultiForward("zp_fw_infection_started", ET_IGNORE, FP_CELL);
 }
 
 // Deathmatch module's player respawn forward
 public zp_fw_deathmatch_respawn_pre(id)
 {
-	// Respawning allowed?
-	if (!get_pcvar_num(cvar_infection_allow_respawn))
-		return PLUGIN_HANDLED;
-	
-	// Respawn if only the last human is left?
-	if (!get_pcvar_num(cvar_respawn_after_last_human) && zp_core_get_human_count() == 1)
-		return PLUGIN_HANDLED;
-	
+	if(is_infection_mod(zp_gamemodes_get_current()))
+	{
+		// Respawning allowed?
+		if (!get_pcvar_num(cvar_infection_allow_respawn))
+			return PLUGIN_HANDLED;
+		
+		// Respawn if only the last human is left?
+		if (!get_pcvar_num(cvar_respawn_after_last_human) && zp_core_get_human_count() == 1)
+			return PLUGIN_HANDLED;
+	}
 	return PLUGIN_CONTINUE;
 }
 
@@ -91,8 +103,11 @@ public zp_fw_gamemodes_choose_post(game_mode_id, target_player)
 	g_TargetPlayer = (target_player == RANDOM_TARGET_PLAYER) ? GetRandomAlive(random_num(1, GetAliveCount())) : target_player
 }
 
-public zp_fw_gamemodes_start()
+public zp_fw_gamemodes_start(game_mode_id)
 {
+	if(!is_infection_mod(game_mode_id))
+		return;
+	
 	// Allow infection for this game mode
 	zp_gamemodes_set_allow_infect()
 	
@@ -124,6 +139,8 @@ public zp_fw_gamemodes_start()
 		set_hudmessage(HUD_EVENT_R, HUD_EVENT_G, HUD_EVENT_B, HUD_EVENT_X, HUD_EVENT_Y, 0, 0.0, 5.0, 1.0, 1.0, -1)
 		ShowSyncHudMsg(0, g_HudSync, "%L", LANG_PLAYER, "NOTICE_FIRST", name)
 	}
+	
+	ExecuteForward(g_Forwards[FW_ROUND_STARTED], g_ForwardResult, g_TargetPlayer);
 }
 
 // Get Alive Count -returns alive players number-
@@ -155,4 +172,9 @@ GetRandomAlive(target_index)
 	}
 	
 	return -1;
+}
+
+bool:is_infection_mod(game_mode_id)
+{
+	return g_InfectionMode != ZP_INVALID_GAME_MODE && game_mode_id == g_InfectionMode;
 }

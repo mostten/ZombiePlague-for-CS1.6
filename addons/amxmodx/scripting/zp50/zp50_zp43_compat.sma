@@ -20,7 +20,15 @@
 #include <zp50_class_nemesis>
 #define LIBRARY_SURVIVOR "zp50_class_survivor"
 #include <zp50_class_survivor>
+
 #include <zp50_gamemodes>
+#define LIBRARY_MODE_INFECTION "zp50_gamemodes_infection"
+#include <zp50_gamemodes_infection>
+#define LIBRARY_MODE_NEMESIS "zp50_gamemodes_nemesis"
+#include <zp50_gamemodes_nemesis>
+#define LIBRARY_MODE_SURVIVOR "zp50_gamemodes_survivor"
+#include <zp50_gamemodes_survivor>
+
 #define LIBRARY_FLASHLIGHT "zp50_flashlight"
 #include <zp50_flashlight>
 #define LIBRARY_EXTRAITEMS "zp50_items"
@@ -90,7 +98,7 @@ new g_MaxPlayers
 new cvar_ammopack_to_money_enable, cvar_ammopack_to_money_ratio
 new cvar_zombie_first_hp_multiplier
 
-new g_GameModeInfectionID, g_GameModeMultiID, g_GameModeNemesisID, g_GameModeSurvivorID, g_GameModeSwarmID, g_GameModePlagueID
+new g_GameModeMultiID, g_GameModeNemesisID, g_GameModeSurvivorID, g_GameModeSwarmID, g_GameModePlagueID
 new g_ModeStarted
 
 new Array:g_ItemID, Array:g_ItemTeams
@@ -134,54 +142,9 @@ public event_round_start()
 
 public zp_fw_gamemodes_start(game_mode_id)
 {
-	if (game_mode_id == g_GameModeInfectionID)
-	{
-		// Get first zombie index
-		new player_index = 1
-		while ((!is_user_alive(player_index) || !zp_core_is_zombie(player_index)) && player_index <= g_MaxPlayers)
-			player_index++
-		
-		if (player_index > g_MaxPlayers)
-		{
-			abort(AMX_ERR_GENERAL, "ERROR - first zombie index not found!")
-			player_index = 0
-		}
-		
-		ExecuteForward(g_Forwards[FW_ROUND_STARTED], g_ForwardResult, MODE_INFECTION, player_index)
-	}
-	else if (game_mode_id == g_GameModeMultiID)
+	if (game_mode_id == g_GameModeMultiID)
 	{
 		ExecuteForward(g_Forwards[FW_ROUND_STARTED], g_ForwardResult, MODE_MULTI, 0)
-	}
-	else if (game_mode_id == g_GameModeNemesisID)
-	{
-		// Get nemesis index
-		new player_index = 1
-		while ((!is_user_alive(player_index) || !zp_class_nemesis_get(player_index)) && player_index <= g_MaxPlayers)
-			player_index++
-		
-		if (player_index > g_MaxPlayers)
-		{
-			abort(AMX_ERR_GENERAL, "ERROR - nemesis index not found!")
-			player_index = 0
-		}
-		
-		ExecuteForward(g_Forwards[FW_ROUND_STARTED], g_ForwardResult, MODE_NEMESIS, player_index)
-	}
-	else if (game_mode_id == g_GameModeSurvivorID)
-	{
-		// Get survivor index
-		new player_index = 1
-		while ((!is_user_alive(player_index) || !zp_class_survivor_get(player_index)) && player_index <= g_MaxPlayers)
-			player_index++
-		
-		if (player_index > g_MaxPlayers)
-		{
-			abort(AMX_ERR_GENERAL, "ERROR - survivor index not found!")
-			player_index = 0
-		}
-		
-		ExecuteForward(g_Forwards[FW_ROUND_STARTED], g_ForwardResult, MODE_SURVIVOR, player_index)
 	}
 	else if (game_mode_id == g_GameModeSwarmID)
 	{
@@ -198,6 +161,24 @@ public zp_fw_gamemodes_start(game_mode_id)
 	}
 	
 	g_ModeStarted = true
+}
+
+public zp_fw_infection_started(first_zombie)
+{
+	ExecuteForward(g_Forwards[FW_ROUND_STARTED], g_ForwardResult, MODE_INFECTION, first_zombie);
+	g_ModeStarted = true;
+}
+
+public zp_fw_nemesis_started(nemesis_index)
+{
+	ExecuteForward(g_Forwards[FW_ROUND_STARTED], g_ForwardResult, MODE_NEMESIS, nemesis_index);
+	g_ModeStarted = true;
+}
+
+public zp_fw_survivor_started(survivor_index)
+{
+	ExecuteForward(g_Forwards[FW_ROUND_STARTED], g_ForwardResult, MODE_SURVIVOR, survivor_index);
+	g_ModeStarted = true;
 }
 
 public zp_fw_gamemodes_end(game_mode_id)
@@ -298,7 +279,6 @@ public zp_fw_core_last_human(id)
 
 public plugin_cfg()
 {
-	g_GameModeInfectionID = zp_gamemodes_get_id("Infection Mode")
 	g_GameModeMultiID = zp_gamemodes_get_id("Multiple Infection Mode")
 	g_GameModeNemesisID = zp_gamemodes_get_id("Nemesis Mode")
 	g_GameModeSurvivorID = zp_gamemodes_get_id("Survivor Mode")
@@ -358,7 +338,15 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_EXTRAITEMS) || equal(module, LIBRARY_FLASHLIGHT) || equal(module, LIBRARY_AMMOPACKS) || equal(module, LIBRARY_GRENADE_FROST))
+	if (equal(module, LIBRARY_NEMESIS)
+	|| equal(module, LIBRARY_SURVIVOR)
+	|| equal(module, LIBRARY_EXTRAITEMS)
+	|| equal(module, LIBRARY_FLASHLIGHT)
+	|| equal(module, LIBRARY_AMMOPACKS)
+	|| equal(module, LIBRARY_GRENADE_FROST)
+	|| equal(module, LIBRARY_MODE_INFECTION)
+	|| equal(module, LIBRARY_MODE_NEMESIS)
+	|| equal(module, LIBRARY_MODE_SURVIVOR))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -553,9 +541,9 @@ public native_get_zombie_maxhealth(plugin_id, num_params)
 		return -1;
 	
 	if (cvar_zombie_first_hp_multiplier && zp_core_is_first_zombie(id))
-		return floatround(float(zp_class_zombie_get_max_health(id, classid)) * get_pcvar_float(cvar_zombie_first_hp_multiplier));
+		return floatround(float(zp_class_zombie_get_max_health(id)) * get_pcvar_float(cvar_zombie_first_hp_multiplier));
 	
-	return zp_class_zombie_get_max_health(id, classid);
+	return zp_class_zombie_get_max_health(id);
 }
 
 public native_get_user_batteries(plugin_id, num_params)
@@ -903,9 +891,7 @@ public native_register_zombie_class(plugin_id, num_params)
 	new Float:speed = float(get_param(6))
 	new Float:gravity = get_param_f(7)
 	new Float:knockback = get_param_f(8)
-	new bool:infection = true
-	new bool:blood = true
-	new classid = zp_class_zombie_register(name, desc, health, speed, gravity, infection, blood)
+	new classid = zp_class_zombie_register(name, desc, health, speed, gravity)
 	if (classid < 0) return classid;
 	zp_class_zombie_register_model(classid, model)
 	zp_class_zombie_register_claw(classid, clawmodel)

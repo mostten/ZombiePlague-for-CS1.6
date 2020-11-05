@@ -1,7 +1,0 @@
-[en]
-WALKMOD_FLY = Switch to noclip
-WALKMOD_NORMAL = Switch to normal
-
-[cn]
-WALKMOD_FLY = 切换至穿墙模式
-WALKMOD_NORMAL = 切换至行走模式

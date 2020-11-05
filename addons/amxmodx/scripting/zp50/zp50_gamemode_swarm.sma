@@ -34,6 +34,7 @@ new Array:g_sound_swarm
 
 new g_MaxPlayers
 new g_HudSync
+new g_SwarmMode
 
 new cvar_swarm_chance, cvar_swarm_min_players
 new cvar_swarm_show_hud, cvar_swarm_sounds
@@ -43,7 +44,7 @@ public plugin_precache()
 {
 	// Register game mode at precache (plugin gets paused after this)
 	register_plugin("[ZP] Game Mode: Swarm", ZP_VERSION_STRING, "ZP Dev Team")
-	zp_gamemodes_register("Swarm Mode")
+	g_SwarmMode = zp_gamemodes_register("Swarm Mode")
 	
 	// Create the HUD Sync Objects
 	g_HudSync = CreateHudSyncObj()
@@ -91,10 +92,12 @@ public plugin_precache()
 // Deathmatch module's player respawn forward
 public zp_fw_deathmatch_respawn_pre(id)
 {
-	// Respawning allowed?
-	if (!get_pcvar_num(cvar_swarm_allow_respawn))
-		return PLUGIN_HANDLED;
-	
+	if(is_swarm_mod(zp_gamemodes_get_current()))
+	{
+		// Respawning allowed?
+		if (!get_pcvar_num(cvar_swarm_allow_respawn))
+			return PLUGIN_HANDLED;
+	}
 	return PLUGIN_CONTINUE;
 }
 
@@ -115,8 +118,11 @@ public zp_fw_gamemodes_choose_pre(game_mode_id, skipchecks)
 	return PLUGIN_CONTINUE;
 }
 
-public zp_fw_gamemodes_start()
+public zp_fw_gamemodes_start(game_mode_id)
 {
+	if(!is_swarm_mod(game_mode_id))
+		return;
+	
 	new id
 	
 	// Turn every Terrorist into a zombie
@@ -171,4 +177,9 @@ GetAliveCount()
 	}
 	
 	return iAlive;
+}
+
+bool:is_swarm_mod(game_mode_id)
+{
+	return g_SwarmMode != ZP_INVALID_GAME_MODE && game_mode_id == g_SwarmMode;
 }

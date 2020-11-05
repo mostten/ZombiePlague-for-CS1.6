@@ -21,63 +21,50 @@
 #include <cs_ham_bots_api>
 #include <zp50_core>
 
-// Settings file
-new const ZP_SETTINGS_FILE[] = "zombieplague.ini"
+#define LIBRARY_HUMAN "zp50_class_human"
+#include <zp50_class_human>
 
-// Default models
-new const models_survivor_player[][] = { "leet", "sas" }
-
-new Array:g_models_survivor_player
-
-#define PLAYERMODEL_MAX_LENGTH 32
-#define MODEL_MAX_LENGTH 64
 #define MAXPLAYERS 32
-
-new g_models_survivor_weapon[MODEL_MAX_LENGTH] = "models/v_m249.mdl"
 
 #define TASK_AURA 100
 #define ID_AURA (taskid - TASK_AURA)
 
-#define flag_get(%1,%2) (%1 & (1 << (%2 & 31)))
-#define flag_get_boolean(%1,%2) (flag_get(%1,%2) ? true : false)
-#define flag_set(%1,%2) %1 |= (1 << (%2 & 31))
-#define flag_unset(%1,%2) %1 &= ~(1 << (%2 & 31))
-
 // CS Player CBase Offsets (win32)
-const PDATA_SAFE = 2
-const OFFSET_ACTIVE_ITEM = 373
+new const PDATA_SAFE = 2
+new const OFFSET_ACTIVE_ITEM = 373
 
 // Weapon bitsums
-const PRIMARY_WEAPONS_BIT_SUM = (1<<CSW_SCOUT)|(1<<CSW_XM1014)|(1<<CSW_MAC10)|(1<<CSW_AUG)|(1<<CSW_UMP45)|(1<<CSW_SG550)|(1<<CSW_GALIL)|(1<<CSW_FAMAS)|(1<<CSW_AWP)|(1<<CSW_MP5NAVY)|(1<<CSW_M249)|(1<<CSW_M3)|(1<<CSW_M4A1)|(1<<CSW_TMP)|(1<<CSW_G3SG1)|(1<<CSW_SG552)|(1<<CSW_AK47)|(1<<CSW_P90)
-const SECONDARY_WEAPONS_BIT_SUM = (1<<CSW_P228)|(1<<CSW_ELITE)|(1<<CSW_FIVESEVEN)|(1<<CSW_USP)|(1<<CSW_GLOCK18)|(1<<CSW_DEAGLE)
-const GRENADES_WEAPONS_BIT_SUM = (1<<CSW_HEGRENADE)|(1<<CSW_FLASHBANG)|(1<<CSW_SMOKEGRENADE)
-
-// Ammo Type Names for weapons
-new const AMMOTYPE[][] = { "", "357sig", "", "762nato", "", "buckshot", "", "45acp", "556nato", "", "9mm", "57mm", "45acp",
-			"556nato", "556nato", "556nato", "45acp", "9mm", "338magnum", "9mm", "556natobox", "buckshot",
-			"556nato", "9mm", "762nato", "", "50ae", "556nato", "762nato", "", "57mm" }
-
-// Max BP ammo for weapons
-new const MAXBPAMMO[] = { -1, 52, -1, 90, 1, 32, 1, 100, 90, 1, 120, 100, 100, 90, 90, 90, 100, 120,
-			30, 120, 200, 32, 90, 120, 90, 2, 35, 90, 90, -1, 100 }
+new const PRIMARY_WEAPONS_BIT_SUM = (1<<CSW_SCOUT)|(1<<CSW_XM1014)|(1<<CSW_MAC10)|(1<<CSW_AUG)|(1<<CSW_UMP45)|(1<<CSW_SG550)|(1<<CSW_GALIL)|(1<<CSW_FAMAS)|(1<<CSW_AWP)|(1<<CSW_MP5NAVY)|(1<<CSW_M249)|(1<<CSW_M3)|(1<<CSW_M4A1)|(1<<CSW_TMP)|(1<<CSW_G3SG1)|(1<<CSW_SG552)|(1<<CSW_AK47)|(1<<CSW_P90)
+new const SECONDARY_WEAPONS_BIT_SUM = (1<<CSW_P228)|(1<<CSW_ELITE)|(1<<CSW_FIVESEVEN)|(1<<CSW_USP)|(1<<CSW_GLOCK18)|(1<<CSW_DEAGLE)
+new const GRENADES_WEAPONS_BIT_SUM = (1<<CSW_HEGRENADE)|(1<<CSW_FLASHBANG)|(1<<CSW_SMOKEGRENADE)
 
 #define PRIMARY_ONLY 1
 #define SECONDARY_ONLY 2
 #define GRENADES_ONLY 4
 
-new g_MaxPlayers
-new g_IsSurvivor
-new g_MaxHealth[MAXPLAYERS+1]
-
-new cvar_survivor_health, cvar_survivor_base_health, cvar_survivor_speed, cvar_survivor_gravity
 new cvar_survivor_glow
 new cvar_survivor_aura, cvar_survivor_aura_color_R, cvar_survivor_aura_color_G, cvar_survivor_aura_color_B
-new cvar_survivor_weapon, cvar_survivor_weapon_block
-new cvar_survivor_damage
+new cvar_survivor_weapon_block
+
+new const survivor_name[] = "Survivor";
+new const survivor_info[] = "=Survivor=";
+new const survivor_models[][] = { "leet", "sas" }
+new const survivor_weapon[] = "weapon_m249";
+new const survivor_view_weapon[] = "models/v_m249.mdl";
+new const survivor_health = 100;
+new const survivor_base_health = 100;
+new const Float:survivor_speed = 0.95;
+new const Float:survivor_gravity = 1.25;
+new const bool:survivor_infection = false;
+new const Float:damage_multiplier = 1.0;
+
+new g_Classid = ZP_INVALID_HUMAN_CLASS;
+
+new g_MaxPlayers;
 
 public plugin_init()
 {
-	register_plugin("[ZP] Class: Survivor", ZP_VERSION_STRING, "ZP Dev Team")
+	register_plugin("[ZP] Class: Survivor", ZP_VERSION_STRING, "Mostten")
 	
 	register_clcmd("drop", "clcmd_drop")
 	RegisterHam(Ham_Touch, "weaponbox", "fw_TouchWeapon")
@@ -85,63 +72,52 @@ public plugin_init()
 	RegisterHam(Ham_Touch, "weapon_shield", "fw_TouchWeapon")
 	RegisterHam(Ham_Killed, "player", "fw_PlayerKilled")
 	RegisterHamBots(Ham_Killed, "fw_PlayerKilled")
-	RegisterHam(Ham_TakeDamage, "player", "fw_TakeDamage")
-	RegisterHamBots(Ham_TakeDamage, "fw_TakeDamage")
 	register_forward(FM_ClientDisconnect, "fw_ClientDisconnect_Post", 1)
 	
-	g_MaxPlayers = get_maxplayers()
-	
-	cvar_survivor_health = register_cvar("zp_survivor_health", "0")
-	cvar_survivor_base_health = register_cvar("zp_survivor_base_health", "100")
-	cvar_survivor_speed = register_cvar("zp_survivor_speed", "0.95")
-	cvar_survivor_gravity = register_cvar("zp_survivor_gravity", "1.25")
 	cvar_survivor_glow = register_cvar("zp_survivor_glow", "1")
 	cvar_survivor_aura = register_cvar("zp_survivor_aura", "1")
 	cvar_survivor_aura_color_R = register_cvar("zp_survivor_aura_color_R", "0")
 	cvar_survivor_aura_color_G = register_cvar("zp_survivor_aura_color_G", "0")
 	cvar_survivor_aura_color_B = register_cvar("zp_survivor_aura_color_B", "150")
-	cvar_survivor_damage = register_cvar("zp_survivor_damage", "1.0")
-	cvar_survivor_weapon = register_cvar("zp_survivor_weapon", "weapon_m249")
 	cvar_survivor_weapon_block = register_cvar("zp_survivor_weapon_block", "1")
+	
+	g_MaxPlayers = get_maxplayers()
 }
 
 public plugin_precache()
 {
-	// Initialize arrays
-	g_models_survivor_player = ArrayCreate(PLAYERMODEL_MAX_LENGTH, 1)
+	g_Classid = zp_class_human_register(survivor_name,
+										survivor_info,
+										survivor_health,
+										survivor_speed,
+										survivor_gravity,
+										survivor_infection,
+										survivor_base_health);
 	
-	// Load from external file
-	amx_load_setting_string_arr(ZP_SETTINGS_FILE, "Player Models", "SURVIVOR", g_models_survivor_player)
+	for (new index = 0; index < sizeof survivor_models; index++)
+		zp_class_human_register_model(g_Classid, survivor_models[index]);
 	
-	// If we couldn't load from file, use and save default ones
-	new index
-	if (ArraySize(g_models_survivor_player) == 0)
-	{
-		for (index = 0; index < sizeof models_survivor_player; index++)
-			ArrayPushString(g_models_survivor_player, models_survivor_player[index])
+	zp_class_human_register_weapon(g_Classid, survivor_weapon);
+	zp_class_human_register_vm(g_Classid, survivor_view_weapon);
+	zp_class_human_register_dm(g_Classid, damage_multiplier);
+	
+	set_module_filter("module_filter");
+	set_native_filter("native_filter");
+}
+
+public module_filter(const module[])
+{
+	if (equal(module, LIBRARY_HUMAN))
+		return PLUGIN_HANDLED;
+	
+	return PLUGIN_CONTINUE;
+}
+public native_filter(const name[], index, trap)
+{
+	if (!trap)
+		return PLUGIN_HANDLED;
 		
-		// Save to external file
-		amx_save_setting_string_arr(ZP_SETTINGS_FILE, "Player Models", "SURVIVOR", g_models_survivor_player)
-	}
-	
-	// Load from external file, save if not found
-	if (!amx_load_setting_string(ZP_SETTINGS_FILE, "Weapon Models", "V_WEAPON SURVIVOR", g_models_survivor_weapon, charsmax(g_models_survivor_weapon)))
-		amx_save_setting_string(ZP_SETTINGS_FILE, "Weapon Models", "V_WEAPON SURVIVOR", g_models_survivor_weapon)
-	
-	
-	// Precache models
-	new player_model[PLAYERMODEL_MAX_LENGTH], model_path[128]
-	for (index = 0; index < ArraySize(g_models_survivor_player); index++)
-	{
-		ArrayGetString(g_models_survivor_player, index, player_model, charsmax(player_model))
-		formatex(model_path, charsmax(model_path), "models/player/%s/%s.mdl", player_model, player_model)
-		precache_model(model_path)
-		// Support modelT.mdl files
-		formatex(model_path, charsmax(model_path), "models/player/%s/%sT.mdl", player_model, player_model)
-		if (file_exists(model_path)) precache_model(model_path)
-	}
-	
-	precache_model(g_models_survivor_weapon)
+	return PLUGIN_CONTINUE;
 }
 
 public plugin_natives()
@@ -155,51 +131,19 @@ public plugin_natives()
 
 public client_disconnected(id)
 {
-	if (flag_get(g_IsSurvivor, id))
-	{
-		// Remove survivor glow
-		if (get_pcvar_num(cvar_survivor_glow))
-			set_user_rendering(id)
+	// Remove survivor glow
+	if (get_pcvar_num(cvar_survivor_glow) && is_user_valid(id))
+		set_user_rendering(id)
 		
-		// Remove survivor aura
-		if (get_pcvar_num(cvar_survivor_aura))
-			remove_task(id+TASK_AURA)
-	}
-}
-
-public fw_ClientDisconnect_Post(id)
-{
-	// Reset flags AFTER disconnect (to allow checking if the player was survivor before disconnecting)
-	flag_unset(g_IsSurvivor, id)
-}
-
-// Ham Take Damage Forward
-public fw_TakeDamage(victim, inflictor, attacker, Float:damage, damage_type)
-{
-	// Non-player damage or self damage
-	if (victim == attacker || !is_user_alive(attacker))
-		return HAM_IGNORED;
-	
-	// Survivor attacking human
-	if (flag_get(g_IsSurvivor, attacker) && zp_core_is_zombie(victim))
-	{
-		// Ignore survivor damage override if damage comes from a 3rd party entity
-		// (to prevent this from affecting a sub-plugin's rockets e.g.)
-		if (inflictor == attacker)
-		{
-			// Set survivor damage
-			SetHamParamFloat(4, damage * get_pcvar_float(cvar_survivor_damage))
-			return HAM_HANDLED;
-		}
-	}
-	
-	return HAM_IGNORED;
+	// Remove survivor aura
+	if (get_pcvar_num(cvar_survivor_aura))
+		remove_user_aura(id);
 }
 
 public clcmd_drop(id)
 {
 	// Should survivor stick to his weapon?
-	if (flag_get(g_IsSurvivor, id) && get_pcvar_num(cvar_survivor_weapon_block))
+	if (is_user_survivor(id) && get_pcvar_num(cvar_survivor_weapon_block))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -209,7 +153,7 @@ public clcmd_drop(id)
 public fw_TouchWeapon(weapon, id)
 {
 	// Should survivor stick to his weapon?
-	if (get_pcvar_num(cvar_survivor_weapon_block) && is_user_alive(id) && flag_get(g_IsSurvivor, id))
+	if (get_pcvar_num(cvar_survivor_weapon_block) && is_user_alive(id) && is_user_survivor(id))
 		return HAM_SUPERCEDE;
 	
 	return HAM_IGNORED;
@@ -218,101 +162,61 @@ public fw_TouchWeapon(weapon, id)
 // Ham Player Killed Forward
 public fw_PlayerKilled(victim, attacker, shouldgib)
 {
-	if (flag_get(g_IsSurvivor, victim))
-	{
-		// Remove survivor aura
-		if (get_pcvar_num(cvar_survivor_aura))
-			remove_task(victim+TASK_AURA)
-	}
+	// Remove survivor aura
+	if (get_pcvar_num(cvar_survivor_aura))
+		remove_user_aura(victim);
 }
 
 public zp_fw_core_spawn_post(id)
 {
-	if (flag_get(g_IsSurvivor, id))
+	if (is_user_survivor(id))
 	{
 		// Remove survivor glow
 		if (get_pcvar_num(cvar_survivor_glow))
-			set_user_rendering(id)
-		
-		// Remove survivor aura
-		if (get_pcvar_num(cvar_survivor_aura))
-			remove_task(id+TASK_AURA)
-		
-		// Remove survivor weapon model
-		new weapon_name[32]
-		get_pcvar_string(cvar_survivor_weapon, weapon_name, charsmax(weapon_name))
-		new weapon_id = get_weaponid(weapon_name)
-		cs_reset_player_view_model(id, weapon_id)
-		
-		// Remove survivor flag
-		flag_unset(g_IsSurvivor, id)
+			set_user_rendering(id);
 	}
+	
+	// Remove survivor aura
+	if (get_pcvar_num(cvar_survivor_aura))
+		remove_user_aura(id);
 }
 
 public zp_fw_core_infect(id, attacker)
 {
-	if (flag_get(g_IsSurvivor, id))
+	zp_fw_core_spawn_post(id);
+}
+
+public zp_fw_class_human_init_pre(id, classid)
+{
+	if (is_classid_valid(classid))
 	{
-		// Remove survivor glow
+		// Strip current weapons
+		strip_weapons(id, PRIMARY_ONLY);
+		strip_weapons(id, SECONDARY_ONLY);
+		strip_weapons(id, GRENADES_ONLY);
+	}
+	return PLUGIN_CONTINUE;
+}
+
+public zp_fw_class_human_init_post(id, classid)
+{
+	if(is_classid_valid(classid))
+	{
+		// Survivor glow
 		if (get_pcvar_num(cvar_survivor_glow))
-			set_user_rendering(id)
+			set_user_rendering(id, kRenderFxGlowShell, 0, 0, 255, kRenderNormal, 25);
 		
-		// Remove survivor aura
+		// Survivor aura task
 		if (get_pcvar_num(cvar_survivor_aura))
-			remove_task(id+TASK_AURA)
-		
-		// Remove survivor weapon model
-		new weapon_name[32]
-		get_pcvar_string(cvar_survivor_weapon, weapon_name, charsmax(weapon_name))
-		new weapon_id = get_weaponid(weapon_name)
-		cs_reset_player_view_model(id, weapon_id)
-		
-		// Remove survivor flag
-		flag_unset(g_IsSurvivor, id)
+			set_task(0.1, "survivor_aura", id+TASK_AURA, _, _, "b");
 	}
 }
 
-public zp_fw_core_cure_post(id, attacker)
+public zp_fw_class_human_select_pre(client, classid)
 {
-	// Apply Survivor attributes?
-	if (!flag_get(g_IsSurvivor, id))
-		return;
-	
-	// Health
-	g_MaxHealth[id] = (get_pcvar_num(cvar_survivor_health) == 0)?(get_pcvar_num(cvar_survivor_base_health) * GetAliveCount()):(get_pcvar_num(cvar_survivor_health));
-	set_user_health(id, g_MaxHealth[id]);
-	
-	// Gravity
-	set_user_gravity(id, get_pcvar_float(cvar_survivor_gravity))
-	
-	// Speed (if value between 0 and 10, consider it a multiplier)
-	cs_set_player_maxspeed_auto(id, get_pcvar_float(cvar_survivor_speed))
-	
-	// Apply survivor player model
-	new player_model[PLAYERMODEL_MAX_LENGTH]
-	ArrayGetString(g_models_survivor_player, random_num(0, ArraySize(g_models_survivor_player) - 1), player_model, charsmax(player_model))
-	cs_set_player_model(id, player_model)
-	
-	// Apply survivor weapon model
-	new weapon_name[32]
-	get_pcvar_string(cvar_survivor_weapon, weapon_name, charsmax(weapon_name))
-	new weapon_id = get_weaponid(weapon_name)
-	cs_set_player_view_model(id, weapon_id, g_models_survivor_weapon)
-	
-	// Survivor glow
-	if (get_pcvar_num(cvar_survivor_glow))
-		set_user_rendering(id, kRenderFxGlowShell, 0, 0, 255, kRenderNormal, 25)
-	
-	// Survivor aura task
-	if (get_pcvar_num(cvar_survivor_aura))
-		set_task(0.1, "survivor_aura", id+TASK_AURA, _, _, "b")
-	
-	// Strip current weapons and give survivor weapon
-	strip_weapons(id, PRIMARY_ONLY)
-	strip_weapons(id, SECONDARY_ONLY)
-	strip_weapons(id, GRENADES_ONLY)
-	give_item(id, weapon_name)
-	ExecuteHamB(Ham_GiveAmmo, id, MAXBPAMMO[weapon_id], AMMOTYPE[weapon_id], MAXBPAMMO[weapon_id])
+	if(is_classid_valid(classid))
+		return ZP_CLASS_DONT_SHOW;
+	return ZP_CLASS_AVAILABLE;
 }
 
 public native_class_survivor_get(plugin_id, num_params)
@@ -325,7 +229,7 @@ public native_class_survivor_get(plugin_id, num_params)
 		return -1;
 	}
 	
-	return flag_get_boolean(g_IsSurvivor, id);
+	return is_user_survivor(id);
 }
 
 public native_class_survivor_set(plugin_id, num_params)
@@ -338,15 +242,13 @@ public native_class_survivor_set(plugin_id, num_params)
 		return false;
 	}
 	
-	if (flag_get(g_IsSurvivor, id))
+	if (is_user_survivor(id))
 	{
 		log_error(AMX_ERR_NATIVE, "[ZP] Player already a survivor (%d)", id)
 		return false;
 	}
 	
-	flag_set(g_IsSurvivor, id)
-	zp_core_force_cure(id)
-	return true;
+	return zp_class_human_set_current(id, g_Classid);
 }
 
 public native_class_survivor_get_count(plugin_id, num_params)
@@ -363,9 +265,8 @@ public _class_survivor_get_max_health(plugin_id, num_params)
 		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", id);
 		return -1;
 	}
-	if (!flag_get(g_IsSurvivor, id))
-		g_MaxHealth[id] = -1;
-	return g_MaxHealth[id];
+	
+	return zp_class_human_get_max_health(id);
 }
 
 // Survivor aura task
@@ -390,31 +291,16 @@ public survivor_aura(taskid)
 	message_end()
 }
 
-// Get Alive Count -returns alive players number-
-GetAliveCount()
-{
-	new iAlive, id
-	
-	for (id = 1; id <= g_MaxPlayers; id++)
-	{
-		if (is_user_alive(id))
-			iAlive++
-	}
-	
-	return iAlive;
-}
-
 // Get Survivor Count -returns alive survivors number-
 GetSurvivorCount()
 {
-	new iSurvivors, id
-	
-	for (id = 1; id <= g_MaxPlayers; id++)
+	new players[MAXPLAYERS], num, iSurvivors = 0;
+	get_players(players, num, "a");
+	for(new i = 0; i < num; i++)
 	{
-		if (is_user_alive(id) && flag_get(g_IsSurvivor, id))
-			iSurvivors++
+		if(is_user_survivor(players[i]))
+			iSurvivors++;
 	}
-	
 	return iSurvivors;
 }
 
@@ -489,4 +375,24 @@ stock fm_cs_get_current_weapon_ent(id)
 		return -1;
 	
 	return get_pdata_cbase(id, OFFSET_ACTIVE_ITEM);
+}
+
+remove_user_aura(id)
+{
+	if(task_exists(id+TASK_AURA, 0)){remove_task(id+TASK_AURA);}
+}
+
+bool:is_classid_valid(classid)
+{
+	return g_Classid != ZP_INVALID_HUMAN_CLASS && g_Classid == classid;
+}
+
+bool:is_user_survivor(id)
+{
+	return (!zp_core_is_zombie(id) && LibraryExists(LIBRARY_HUMAN, LibType_Library) && is_classid_valid(zp_class_human_get_current(id)));
+}
+
+bool:is_user_valid(id)
+{
+	return (1 <= id <= g_MaxPlayers && is_user_connected(id));
 }

@@ -20,7 +20,7 @@
  * @param id		Player index.
  * @return			True if it is, false otherwise.
  */
-native zp_core_is_zombie(id)
+native bool:zp_core_is_zombie(id)
 
 /**
  * Returns whether a player is the first zombie.
@@ -98,6 +98,14 @@ native zp_core_force_cure(id)
 native zp_core_respawn_as_zombie(id, zombie = true)
 
 /**
+ * Returns whether the player will be respawned as zombie.
+ *
+ * @param id		Player index.
+ * @return			True if it is, false otherwise.
+ */
+native bool:zp_core_is_respawn_as_zombie(id);
+
+/**
  * Called when a player gets infected.
  *
  * @param id		Player index who was infected.
@@ -139,11 +147,46 @@ forward zp_fw_core_last_zombie(id)
 forward zp_fw_core_last_human(id)
 
 /**
+ * Called when a player was died.
+ *
+ * @param victim		Victim index.
+ * @param attacker		Attacker index.
+ */
+forward zp_fw_core_last_human_dead(victim, attacker);
+
+/**
  * Called when a player spawns, before applying human/zombie attributes to him.
  *
  * @param id		Player index.
  */
 forward zp_fw_core_spawn_post(id)
+
+/**
+ * Called when a zombie spawns, after applying zombie attributes to him.
+ *
+ * @param id		Player index.
+ */
+forward zp_fw_core_zombie_spawn_post(id)
+
+/**
+ * Called when a human spawns, after applying human attributes to him.
+ *
+ * @param id		Player index.
+ */
+forward zp_fw_core_human_spawn_post(id)
+/**
+ * Called when a player zombie flag was added.
+ *
+ * @param id		Player index.
+ */
+forward zp_fw_core_zombie_add_post(id)
+
+/**
+ * Called when a player zombie flag was removed.
+ *
+ * @param id		Player index.
+ */
+forward zp_fw_core_zombie_remove_post(id)
 
 /**
  * Called on set a player light style. You can block it by
@@ -240,3 +283,11 @@ native zp_core_update_user_scoreboard(id);
  * @param killer_weapon		Killer weapon, use attacker weapon when "" string.
  */
 native zp_core_send_death_msg(attacker, victim, bool:headshot = false, const killer_weapon[] = "");
+
+/**
+ * Block player's clcorpse only once.
+ *
+ * @param id				id index.
+ * @param block				Block?
+ */
+native zp_core_set_block_clcorpse_once(id, bool:block = true);

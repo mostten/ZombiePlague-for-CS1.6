@@ -18,13 +18,11 @@
 #include <zp50_class_nemesis>
 #define LIBRARY_SURVIVOR "zp50_class_survivor"
 #include <zp50_class_survivor>
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
 
 // CS Player PData Offsets (win32)
 const OFFSET_PAINSHOCK = 108 // ConnorMcLeod
 
-new cvar_painshockfree_zombie, cvar_painshockfree_human, cvar_painshockfree_nemesis, cvar_painshockfree_survivor, cvar_painshockfree_ghost
+new cvar_painshockfree_zombie, cvar_painshockfree_human, cvar_painshockfree_nemesis, cvar_painshockfree_survivor
 
 public plugin_init()
 {
@@ -41,10 +39,6 @@ public plugin_init()
 	if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library))
 		cvar_painshockfree_survivor = register_cvar("zp_painshockfree_survivor", "1")
 	
-	// Ghost Class loaded?
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library))
-		cvar_painshockfree_ghost = register_cvar("zp_painshockfree_ghost", "0")
-	
 	RegisterHam(Ham_TakeDamage, "player", "fw_TakeDamage_Post", 1)
 	RegisterHamBots(Ham_TakeDamage, "fw_TakeDamage_Post", 1)
 }
@@ -56,7 +50,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -79,11 +73,6 @@ public fw_TakeDamage_Post(victim)
 		if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(victim))
 		{
 			if (!get_pcvar_num(cvar_painshockfree_nemesis)) return;
-		}
-		// Ghost Class loaded?
-		else if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(victim))
-		{
-			if (!get_pcvar_num(cvar_painshockfree_ghost)) return;
 		}
 		else
 		{

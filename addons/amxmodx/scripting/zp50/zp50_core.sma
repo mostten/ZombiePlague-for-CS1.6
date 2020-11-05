@@ -17,8 +17,6 @@
 #include <cs_ham_bots_api>
 #include <zp50_core_const>
 
-#define MAXPLAYERS 32
-
 // Custom Forwards
 enum _:TOTAL_FORWARDS
 {
@@ -30,39 +28,47 @@ enum _:TOTAL_FORWARDS
 	FW_USER_CURE_POST,
 	FW_USER_LAST_ZOMBIE,
 	FW_USER_LAST_HUMAN,
+	FW_USER_LAST_HUMAN_DEAD,
 	FW_USER_SPAWN_POST,
+	FW_ZOMBIE_SPAWN_POST,
+	FW_HUMAN_SPAWN_POST,
+	FW_ZOMBIE_FLAG_ADD_POST,
+	FW_ZOMBIE_FLAG_REMOVE_POST,
 	FW_SET_USER_LIGHTSTYLE_PRE,
 	FW_SET_USER_LIGHTSTYLE_POST,
 	FW_SET_USER_SCREENFADE_PRE,
 	FW_SET_USER_SCREENFADE_POST
 }
 
-#define flag_get(%1,%2) (%1 & (1 << (%2 & 31)))
-#define flag_get_boolean(%1,%2) (flag_get(%1,%2) ? true : false)
-#define flag_set(%1,%2) %1 |= (1 << (%2 & 31))
-#define flag_unset(%1,%2) %1 &= ~(1 << (%2 & 31))
+enum UserInfo{
+	UserInfo_Id = 0,
+	bool:UserInfo_IsZombie,
+	bool:UserInfo_IsFirstZombie,
+	bool:UserInfo_IsLastZombie,
+	bool:UserInfo_IsLastHuman,
+	bool:UserInfo_RespawnAsZombie,
+	bool:UserInfo_BlockClcorpse
+};
+new Array:g_UserInfo = Invalid_Array;
 
-new g_MaxPlayers
+new g_MaxPlayers;
 new g_MsgScreenFade;
 new g_MsgScoreAttrib;
 new g_MsgScoreInfo;
 new g_MsgDeathMsg;
-new g_IsZombie
-new g_IsFirstZombie
-new g_IsLastZombie
-new g_LastZombieForwardCalled
-new g_IsLastHuman
-new g_LastHumanForwardCalled
-new g_RespawnAsZombie
-new g_ForwardResult
-new g_Forwards[TOTAL_FORWARDS]
+new g_MsgClCorpse;
+new bool:g_LastZombieForwardCalled;
+new bool:g_LastHumanForwardCalled;
+new bool:g_LastHumanDeadForwardCalled;
+new g_ForwardResult;
+new g_Forwards[TOTAL_FORWARDS];
 
 public plugin_init()
 {
 	register_plugin("[ZP] Core/Engine", ZP_VERSION_STRING, "ZP Dev Team")
 	register_dictionary("zombie_plague.txt")
 	register_dictionary("zombie_plague50.txt")
-	register_dictionary("zombie_plague_mod_ghost.txt")
+	register_dictionary("zombie_plague_zaphie.txt")
 	
 	g_Forwards[FW_USER_INFECT_PRE] = CreateMultiForward("zp_fw_core_infect_pre", ET_CONTINUE, FP_CELL, FP_CELL)
 	g_Forwards[FW_USER_INFECT] = CreateMultiForward("zp_fw_core_infect", ET_IGNORE, FP_CELL, FP_CELL)
@@ -74,8 +80,14 @@ public plugin_init()
 	
 	g_Forwards[FW_USER_LAST_ZOMBIE] = CreateMultiForward("zp_fw_core_last_zombie", ET_IGNORE, FP_CELL)
 	g_Forwards[FW_USER_LAST_HUMAN] = CreateMultiForward("zp_fw_core_last_human", ET_IGNORE, FP_CELL)
+	g_Forwards[FW_USER_LAST_HUMAN_DEAD] = CreateMultiForward("zp_fw_core_last_human_dead", ET_IGNORE, FP_CELL, FP_CELL)
 	
 	g_Forwards[FW_USER_SPAWN_POST] = CreateMultiForward("zp_fw_core_spawn_post", ET_IGNORE, FP_CELL)
+	g_Forwards[FW_ZOMBIE_SPAWN_POST] = CreateMultiForward("zp_fw_core_zombie_spawn_post", ET_IGNORE, FP_CELL)
+	g_Forwards[FW_HUMAN_SPAWN_POST] = CreateMultiForward("zp_fw_core_human_spawn_post", ET_IGNORE, FP_CELL)
+	
+	g_Forwards[FW_ZOMBIE_FLAG_ADD_POST] = CreateMultiForward("zp_fw_core_zombie_add_post", ET_IGNORE, FP_CELL);
+	g_Forwards[FW_ZOMBIE_FLAG_REMOVE_POST] = CreateMultiForward("zp_fw_core_zombie_remove_post", ET_IGNORE, FP_CELL);
 	
 	g_Forwards[FW_SET_USER_LIGHTSTYLE_PRE] = CreateMultiForward("zp_fw_core_set_lightstyle_pre", ET_CONTINUE, FP_CELL, FP_STRING);
 	g_Forwards[FW_SET_USER_LIGHTSTYLE_POST] = CreateMultiForward("zp_fw_core_set_lightstyle_post", ET_IGNORE, FP_CELL, FP_STRING);
@@ -87,13 +99,15 @@ public plugin_init()
 	RegisterHamBots(Ham_Spawn, "fw_PlayerSpawn_Post", 1)
 	RegisterHam(Ham_Killed, "player", "fw_PlayerKilled_Post", 1)
 	RegisterHamBots(Ham_Killed, "fw_PlayerKilled_Post", 1)
-	register_forward(FM_ClientDisconnect, "fw_ClientDisconnect_Post", 1)
 	
 	g_MaxPlayers = get_maxplayers()
 	g_MsgScreenFade = get_user_msgid("ScreenFade");
 	g_MsgScoreAttrib = get_user_msgid("ScoreAttrib");
 	g_MsgScoreInfo = get_user_msgid("ScoreInfo");
 	g_MsgDeathMsg = get_user_msgid("DeathMsg");
+	g_MsgClCorpse = get_user_msgid ("ClCorpse");
+	
+	register_message(g_MsgClCorpse, "message_clcorpse");
 	
 	// To help players find ZP servers
 	register_cvar("zp_version", ZP_VERSION_STR_LONG, FCVAR_SERVER|FCVAR_SPONLY)
@@ -124,21 +138,25 @@ public plugin_natives()
 	register_native("zp_core_force_infect", "native_core_force_infect")
 	register_native("zp_core_force_cure", "native_core_force_cure")
 	register_native("zp_core_respawn_as_zombie", "native_core_respawn_as_zombie")
+	register_native("zp_core_is_respawn_as_zombie", "native_core_is_respawn_as_zombie")
 	register_native("zp_core_set_screenfade", "native_core_set_screenfade");
 	register_native("zp_core_set_lightstyle", "native_core_set_lightstyle");
 	register_native("zp_core_update_user_state", "native_core_update_user_state");
 	register_native("zp_core_update_user_scoreboard", "native_update_user_scoreboard");
 	register_native("zp_core_send_death_msg", "native_core_send_death_msg");
+	register_native("zp_core_set_block_clcorpse_once", "_set_core_block_clcorpse_once");
 }
 
-public fw_ClientDisconnect_Post(id)
+public client_disconnected(id, bool:drop, message[], maxlen)
 {
 	// Reset flags AFTER disconnect (to allow checking if the player was zombie before disconnecting)
-	flag_unset(g_IsZombie, id)
-	flag_unset(g_RespawnAsZombie, id)
+	remove_user_zombie_flag(id);
+	SetUserInfoValue(id, UserInfo_RespawnAsZombie, false);
 	
 	// This should be called AFTER client disconnects (post forward)
-	CheckLastZombieHuman()
+	CheckLastZombieHuman();
+	
+	RemoveUserInfo(id);
 }
 
 public fw_PlayerSpawn_Post(id)
@@ -148,61 +166,69 @@ public fw_PlayerSpawn_Post(id)
 		return;
 	
 	// ZP Spawn Forward
-	ExecuteForward(g_Forwards[FW_USER_SPAWN_POST], g_ForwardResult, id)
+	ExecuteForward(g_Forwards[FW_USER_SPAWN_POST], g_ForwardResult, id);
 	
 	// Set zombie/human attributes upon respawn
-	if (flag_get(g_RespawnAsZombie, id))
-		InfectPlayer(id, id)
+	if (IsRespawnAsZombie(id))
+	{
+		if(InfectPlayer(id, id))
+			ExecuteForward(g_Forwards[FW_ZOMBIE_SPAWN_POST], g_ForwardResult, id);
+	}
 	else
-		CurePlayer(id)
-	
+	{
+		CurePlayer(id);
+		ExecuteForward(g_Forwards[FW_HUMAN_SPAWN_POST], g_ForwardResult, id);
+	}
 	// Reset flag afterwards
-	flag_unset(g_RespawnAsZombie, id)
+	SetUserInfoValue(id, UserInfo_RespawnAsZombie, false);
 }
 
 // Ham Player Killed Post Forward
-public fw_PlayerKilled_Post()
+public fw_PlayerKilled_Post(victim, attacker, shouldgib)
 {
-	CheckLastZombieHuman()
+	CheckLastZombieHuman();
+	CheckLastHumanDead(victim, attacker);
 }
 
-InfectPlayer(id, attacker = 0)
+bool:InfectPlayer(id, attacker = 0)
 {
 	ExecuteForward(g_Forwards[FW_USER_INFECT_PRE], g_ForwardResult, id, attacker)
 	
 	// One or more plugins blocked infection
 	if (g_ForwardResult >= PLUGIN_HANDLED)
-		return;
+		return false;
 	
 	ExecuteForward(g_Forwards[FW_USER_INFECT], g_ForwardResult, id, attacker)
 	
-	flag_set(g_IsZombie, id)
+	add_user_zombie_flag(id);
 	
 	if (GetZombieCount() == 1)
-		flag_set(g_IsFirstZombie, id)
+		SetUserInfoValue(id, UserInfo_IsFirstZombie, true);
 	else
-		flag_unset(g_IsFirstZombie, id)
+		SetUserInfoValue(id, UserInfo_IsFirstZombie, false);
 	
 	ExecuteForward(g_Forwards[FW_USER_INFECT_POST], g_ForwardResult, id, attacker)
 	
 	CheckLastZombieHuman()
+	
+	return true;
 }
 
 CurePlayer(id, attacker = 0)
 {
-	ExecuteForward(g_Forwards[FW_USER_CURE_PRE], g_ForwardResult, id, attacker)
+	ExecuteForward(g_Forwards[FW_USER_CURE_PRE], g_ForwardResult, id, attacker);
 	
 	// One or more plugins blocked cure
 	if (g_ForwardResult >= PLUGIN_HANDLED)
 		return;
 	
-	ExecuteForward(g_Forwards[FW_USER_CURE], g_ForwardResult, id, attacker)
+	ExecuteForward(g_Forwards[FW_USER_CURE], g_ForwardResult, id, attacker);
 	
-	flag_unset(g_IsZombie, id)
+	remove_user_zombie_flag(id);
 	
-	ExecuteForward(g_Forwards[FW_USER_CURE_POST], g_ForwardResult, id, attacker)
+	ExecuteForward(g_Forwards[FW_USER_CURE_POST], g_ForwardResult, id, attacker);
 	
-	CheckLastZombieHuman()
+	CheckLastZombieHuman();
 }
 
 // Last Zombie/Human Check
@@ -217,13 +243,13 @@ CheckLastZombieHuman()
 		for (id = 1; id <= g_MaxPlayers; id++)
 		{
 			// Last zombie
-			if (is_user_alive(id) && flag_get(g_IsZombie, id))
+			if (is_user_alive(id) && IsZombie(id))
 			{
-				flag_set(g_IsLastZombie, id)
+				SetUserInfoValue(id, UserInfo_IsLastZombie, true);
 				last_zombie_id = id
 			}
 			else
-				flag_unset(g_IsLastZombie, id)
+				SetUserInfoValue(id, UserInfo_IsLastZombie, false);
 		}
 	}
 	else
@@ -231,7 +257,7 @@ CheckLastZombieHuman()
 		g_LastZombieForwardCalled = false
 		
 		for (id = 1; id <= g_MaxPlayers; id++)
-			flag_unset(g_IsLastZombie, id)
+			SetUserInfoValue(id, UserInfo_IsLastZombie, false);
 	}
 	
 	// Last zombie forward
@@ -246,13 +272,13 @@ CheckLastZombieHuman()
 		for (id = 1; id <= g_MaxPlayers; id++)
 		{
 			// Last human
-			if (is_user_alive(id) && !flag_get(g_IsZombie, id))
+			if (is_user_alive(id) && !IsZombie(id))
 			{
-				flag_set(g_IsLastHuman, id)
-				last_human_id = id
+				SetUserInfoValue(id, UserInfo_IsLastHuman, true);
+				last_human_id = id;
 			}
 			else
-				flag_unset(g_IsLastHuman, id)
+				SetUserInfoValue(id, UserInfo_IsLastHuman, false);
 		}
 	}
 	else
@@ -260,14 +286,26 @@ CheckLastZombieHuman()
 		g_LastHumanForwardCalled = false
 		
 		for (id = 1; id <= g_MaxPlayers; id++)
-			flag_unset(g_IsLastHuman, id)
+			SetUserInfoValue(id, UserInfo_IsLastHuman, false);
 	}
 	
 	// Last human forward
 	if (last_human_id > 0 && !g_LastHumanForwardCalled)
 	{
 		ExecuteForward(g_Forwards[FW_USER_LAST_HUMAN], g_ForwardResult, last_human_id)
-		g_LastHumanForwardCalled = true
+		g_LastHumanForwardCalled = true;
+		g_LastHumanDeadForwardCalled = false;
+	}
+}
+
+CheckLastHumanDead(victim, attacker)
+{
+	if(!IsZombie(victim)
+	&& GetHumanCount() == 0
+	&& !g_LastHumanDeadForwardCalled)
+	{
+		ExecuteForward(g_Forwards[FW_USER_LAST_HUMAN_DEAD], g_ForwardResult, victim, attacker);
+		g_LastHumanDeadForwardCalled = true;
 	}
 }
 
@@ -281,7 +319,7 @@ public native_core_is_zombie(plugin_id, num_params)
 		return -1;
 	}
 	
-	return flag_get_boolean(g_IsZombie, id);
+	return IsZombie(id);
 }
 
 public native_core_is_first_zombie(plugin_id, num_params)
@@ -294,7 +332,7 @@ public native_core_is_first_zombie(plugin_id, num_params)
 		return -1;
 	}
 	
-	return flag_get_boolean(g_IsFirstZombie, id);
+	return IsFirstZombie(id);
 }
 
 public native_core_is_last_zombie(plugin_id, num_params)
@@ -307,7 +345,7 @@ public native_core_is_last_zombie(plugin_id, num_params)
 		return -1;
 	}
 	
-	return flag_get_boolean(g_IsLastZombie, id);
+	return IsLastZombie(id);
 }
 
 public native_core_is_last_human(plugin_id, num_params)
@@ -320,7 +358,7 @@ public native_core_is_last_human(plugin_id, num_params)
 		return -1;
 	}
 	
-	return flag_get_boolean(g_IsLastHuman, id);
+	return IsLastHuman(id);
 }
 
 public native_core_get_zombie_count(plugin_id, num_params)
@@ -343,7 +381,7 @@ public native_core_infect(plugin_id, num_params)
 		return false;
 	}
 	
-	if (flag_get(g_IsZombie, id))
+	if (IsZombie(id))
 	{
 		log_error(AMX_ERR_NATIVE, "[ZP] Player already infected (%d)", id)
 		return false;
@@ -371,7 +409,7 @@ public native_core_cure(plugin_id, num_params)
 		return false;
 	}
 	
-	if (!flag_get(g_IsZombie, id))
+	if (!IsZombie(id))
 	{
 		log_error(AMX_ERR_NATIVE, "[ZP] Player not infected (%d)", id)
 		return false;
@@ -430,11 +468,24 @@ public native_core_respawn_as_zombie(plugin_id, num_params)
 	new respawn_as_zombie = get_param(2)
 	
 	if (respawn_as_zombie)
-		flag_set(g_RespawnAsZombie, id)
+		SetUserInfoValue(id, UserInfo_RespawnAsZombie, true);
 	else
-		flag_unset(g_RespawnAsZombie, id)
+		SetUserInfoValue(id, UserInfo_RespawnAsZombie, false);
 	
 	return true;
+}
+
+public native_core_is_respawn_as_zombie(plugin_id, num_params)
+{
+	new id = get_param(1)
+	
+	if (!is_user_connected(id))
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", id)
+		return false;
+	}
+	
+	return IsRespawnAsZombie(id);
 }
 
 public native_core_set_screenfade(plugin_id, num_params)
@@ -552,6 +603,14 @@ public native_core_send_death_msg(plugin_id, num_params)
 	send_death_msg(attacker, victim, headshot, killer_weapon);
 }
 
+public _set_core_block_clcorpse_once(plugin_id, num_params)
+{
+	new id = get_param(1);
+	new bool:block = bool:get_param(2);
+	
+	SetUserInfoValue(id, UserInfo_BlockClcorpse, block);
+}
+
 // Send Death Message
 send_death_msg(attacker, victim, bool:headshot = false, const killer_weapon[] = "")
 {
@@ -578,6 +637,32 @@ send_death_msg(attacker, victim, bool:headshot = false, const killer_weapon[] = 
 	message_end();
 }
 
+public message_clcorpse(msg_id, msg_dest, msg_entity)
+{
+	new id = get_msg_arg_int(12);
+	
+	if(IsUserBlockClcorpse(id))
+	{
+		SetUserInfoValue(id, UserInfo_BlockClcorpse, false);
+		
+		return PLUGIN_HANDLED;
+	}
+	
+	return PLUGIN_CONTINUE;
+}
+
+add_user_zombie_flag(id)
+{
+	SetUserInfoValue(id, UserInfo_IsZombie, true);
+	ExecuteForward(g_Forwards[FW_ZOMBIE_FLAG_ADD_POST], g_ForwardResult, id);
+}
+
+remove_user_zombie_flag(id)
+{
+	SetUserInfoValue(id, UserInfo_IsZombie, false);
+	ExecuteForward(g_Forwards[FW_ZOMBIE_FLAG_REMOVE_POST], g_ForwardResult, id);
+}
+
 // Get Zombie Count -returns alive zombies number-
 GetZombieCount()
 {
@@ -585,7 +670,7 @@ GetZombieCount()
 	
 	for (id = 1; id <= g_MaxPlayers; id++)
 	{
-		if (is_user_alive(id) && flag_get(g_IsZombie, id))
+		if (is_user_alive(id) && IsZombie(id))
 			iZombies++
 	}
 	
@@ -599,9 +684,127 @@ GetHumanCount()
 	
 	for (id = 1; id <= g_MaxPlayers; id++)
 	{
-		if (is_user_alive(id) && !flag_get(g_IsZombie, id))
+		if (is_user_alive(id) && !IsZombie(id))
 			iHumans++
 	}
 	
 	return iHumans;
+}
+
+ArraysInit()
+{
+	if(g_UserInfo == Invalid_Array)
+		g_UserInfo = ArrayCreate(_:UserInfo, 1);
+}
+
+bool:IsZombie(const id)
+{
+	new bool:iszombie = false;
+	return GetUserInfoValue(id, UserInfo_IsZombie, iszombie) && iszombie;
+}
+
+bool:IsFirstZombie(const id)
+{
+	new bool:isfirst = false;
+	return GetUserInfoValue(id, UserInfo_IsFirstZombie, isfirst) && isfirst;
+}
+
+bool:IsLastZombie(const id)
+{
+	new bool:islast = false;
+	return GetUserInfoValue(id, UserInfo_IsLastZombie, islast) && islast;
+}
+
+bool:IsLastHuman(const id)
+{
+	new bool:islast = false;
+	return GetUserInfoValue(id, UserInfo_IsLastHuman, islast) && islast;
+}
+
+bool:IsRespawnAsZombie(const id)
+{
+	new bool:aszombie = false;
+	return GetUserInfoValue(id, UserInfo_RespawnAsZombie, aszombie) && aszombie;
+}
+
+bool:IsUserBlockClcorpse(const id)
+{
+	new bool:block = false;
+	return GetUserInfoValue(id, UserInfo_BlockClcorpse, block) && block;
+}
+
+SetUserInfoValue(const id, const UserInfo:info_type, const any:value)
+{
+	ArraysInit();
+	
+	new any:infos[_:UserInfo];
+	new index = GetUserInfo(id, infos);
+	if(index < 0)
+	{
+		for(new i = 0; i < sizeof(infos); i++){infos[i] = false;}
+		
+		infos[_:UserInfo_Id] = id;
+		infos[_:info_type] = value;
+		
+		index = ArrayPushArray(g_UserInfo, infos);
+	}
+	else
+	{
+		infos[_:info_type] = value;
+		ArraySetArray(g_UserInfo, index, infos);
+	}
+	
+	return index;
+}
+
+bool:GetUserInfoValue(const id, const UserInfo:info_type, &any:result)
+{
+	new any:infos[_:UserInfo];
+	
+	if(GetUserInfo(id, infos) >= 0)
+	{
+		result = infos[_:info_type];
+		return true;
+	}
+	
+	return false;
+}
+
+GetUserInfo(const id, any:infos[_:UserInfo])
+{
+	new index = GetUserInfoIndex(id);
+	
+	if(index >= 0){ArrayGetArray(g_UserInfo, index, infos);}
+	
+	return index;
+}
+
+GetUserInfoIndex(const id)
+{
+	if(g_UserInfo == Invalid_Array){return -1;}
+	
+	new count = ArraySize(g_UserInfo);
+	if(count <= 0){return -1;}
+	
+	new any:infos[_:UserInfo];
+	for(new i = 0; i < count; i++)
+	{
+		ArrayGetArray(g_UserInfo, i, infos);
+		
+		if(infos[_:UserInfo_Id] == id){return i;}
+	}
+	
+	return -1;
+}
+
+bool:RemoveUserInfo(const id)
+{
+	new index = GetUserInfoIndex(id);
+	
+	if(index >= 0)
+	{
+		ArrayDeleteItem(g_UserInfo, index);
+		return true;
+	}
+	return false;
 }

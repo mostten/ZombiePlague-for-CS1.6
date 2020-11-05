@@ -1,0 +1,30 @@
+[en]
+NOTICE_PREDATOR = Predator Mode !!!
+ZAPHIE_NOTICE_FIRST = %s is the first zaphie !!
+ZAPHIE_WIN_HUMAN = Humans defeated the plague!
+ZAPHIE_WIN_ZAPHIE = Zaphies have taken over the world!
+
+ROUND_COUNTDOWN (Infection Mode) = Biochemical virus is looking for host in %d seconds.
+ROUND_COUNTDOWN (Multiple Infection Mode) = Biochemical virus is looking for host in %d seconds.
+ROUND_COUNTDOWN (Swarm Mode) = Biochemical virus is looking for host in %d seconds.
+ROUND_COUNTDOWN (Nemesis Mode) = Biochemical virus is looking for host in %d seconds.
+ROUND_COUNTDOWN (Survivor Mode) = Biochemical virus is looking for host in %d seconds.
+ROUND_COUNTDOWN (Plague Mode) = Biochemical virus is looking for host in %d seconds.
+ROUND_COUNTDOWN (Armageddon Mode) = Biochemical virus is looking for host in %d seconds.
+ROUND_COUNTDOWN (Zaphie Mode) = Zaphie will appear in %d seconds.
+
+[cn]
+NOTICE_PREDATOR = 铁血模式 !!!
+ZAPHIE_NOTICE_FIRST = %s 是第一个恶灵...
+ZAPHIE_WIN_HUMAN = 人类战胜了恶灵!
+ZAPHIE_WIN_ZAPHIE = 恶灵已经统治了世界!
+
+ROUND_COUNTDOWN (Infection Mode) = 生化病毒正在寻找宿主, 剩余 %d 秒.
+ROUND_COUNTDOWN (Multiple Infection Mode) = 生化病毒正在寻找宿主, 剩余 %d 秒.
+ROUND_COUNTDOWN (Swarm Mode) = 生化病毒正在寻找宿主, 剩余 %d 秒.
+ROUND_COUNTDOWN (Nemesis Mode) = 生化病毒正在寻找宿主, 剩余 %d 秒.
+ROUND_COUNTDOWN (Survivor Mode) = 生化病毒正在寻找宿主, 剩余 %d 秒.
+ROUND_COUNTDOWN (Plague Mode) = 生化病毒正在寻找宿主, 剩余 %d 秒.
+ROUND_COUNTDOWN (Armageddon Mode) = 生化病毒正在寻找宿主, 剩余 %d 秒.
+ROUND_COUNTDOWN (Zaphie Mode) = 恶灵将在 %d 秒后出现.
+

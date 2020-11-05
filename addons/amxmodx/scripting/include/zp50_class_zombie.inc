@@ -24,6 +24,15 @@
 native zp_class_zombie_get_current(id)
 
 /**
+ * Sets a player's current zombie class ID.
+ *
+ * @param id		Player index.
+ * @param classid	A valid zombie class ID.
+ * @return			True on success, false otherwise.
+ */
+native bool:zp_class_zombie_set_current(id, classid)
+
+/**
  * Returns a player's next zombie class ID (for the next infection).
  *
  * @param id		Player index.
@@ -38,7 +47,16 @@ native zp_class_zombie_get_next(id)
  * @param classid	A valid zombie class ID.
  * @return			True on success, false otherwise.
  */
-native zp_class_zombie_set_next(id, classid)
+native bool:zp_class_zombie_set_next(id, classid)
+
+/**
+ * Sets a player's next zombie class ID (for the next infection) only once.
+ *
+ * @param id		Player index.
+ * @param classid	A valid zombie class ID.
+ * @return			True on success, false otherwise.
+ */
+native bool:zp_class_zombie_set_next_once(id, classid)
 
 /**
  * Returns the default maximum health for a specific zombie class.
@@ -46,10 +64,9 @@ native zp_class_zombie_set_next(id, classid)
  * Note: does not take into account any kind of HP multipliers.
  *
  * @param id		Player index.
- * @param classid	A valid zombie class ID.
  * @return			Maximum amount of health points, -1 on error.
  */
-native zp_class_zombie_get_max_health(id, classid)
+native zp_class_zombie_get_max_health(id)
 
 /**
  * Registers a custom class which will be added to the zombie classes menu of ZP.
@@ -66,7 +83,7 @@ native zp_class_zombie_get_max_health(id, classid)
  * @param blood			Class allow blood.
  * @return				An internal zombie class ID, or ZP_INVALID_ZOMBIE_CLASS on failure.
  */
-native zp_class_zombie_register(const name[], const description[], health, Float:speed, Float:gravity, bool:infection = true, bool:blood = true)
+native zp_class_zombie_register(const name[], const description[], health, Float:speed, Float:gravity, bool:infection = true, Float:speedPrimaryAttack = -1.0, Float:speedSecondaryAttack = -1.0, Float:damagePrimaryAttack = -1.0, Float:damageSecondaryAttack = -1.0, bool:blood = true, base_health = 1800)
 
 /**
  * Registers a custom player model for a given zombie class.
@@ -164,7 +181,39 @@ native Float:zp_class_zombie_get_dm(classid)
  * @param classid		A valid zombie class ID.
  * @return				True if it is allow infection, false otherwise.
  */
-native zp_class_zombie_get_infection(classid)
+native bool:zp_class_zombie_get_infection(classid)
+
+/**
+ * Returns a zombie class' primary attack interval.
+ *
+ * @param classid		A valid zombie class ID.
+ * @return				Interval of primary attack.
+ */
+native Float:zp_class_zombie_get_pi(classid)
+
+/**
+ * Returns a zombie class' secondary attack interval.
+ *
+ * @param classid		A valid zombie class ID.
+ * @return				Interval of secondary attack.
+ */
+native Float:zp_class_zombie_get_si(classid)
+
+/**
+ * Returns a zombie class' primary attack damage.
+ *
+ * @param classid		A valid zombie class ID.
+ * @return				Damage of primary attack.
+ */
+native Float:zp_class_zombie_get_pd(classid)
+
+/**
+ * Returns a zombie class' secondary attack damage.
+ *
+ * @param classid		A valid zombie class ID.
+ * @return				Damage of secondary attack.
+ */
+native Float:zp_class_zombie_get_sd(classid)
 
 /**
  * Returns a zombie class' blood.
@@ -172,7 +221,7 @@ native zp_class_zombie_get_infection(classid)
  * @param classid		A valid zombie class ID.
  * @return				True if it is allow blood, false otherwise.
  */
-native zp_class_zombie_get_blood(classid)
+native bool:zp_class_zombie_get_blood(classid)
 
 /**
  * Returns number of registered zombie classes.
@@ -216,3 +265,31 @@ forward zp_fw_class_zombie_select_pre(id, classid)
  * @param classid		Internal zombie class ID.
  */
 forward zp_fw_class_zombie_select_post(id, classid)
+
+/**
+ * Called right when class menu show pre.
+ *
+ * Return PLUGIN_HANDLED to block
+ *
+ * @param id			Player index.
+ */
+forward zp_fw_class_zombie_menu_show_pre(id)
+
+/**
+ * Called right when class init.
+ *
+ * Possible return values are:
+ *	- PLUGIN_HANDLED to block
+ *
+ * @param id			Player index.
+ * @param classid		Internal zombie class ID.
+ */
+forward zp_fw_class_zombie_init_pre(id, classid)
+
+/**
+ * Called right when class inited.
+ *
+ * @param id			Player index.
+ * @param classid		Internal zombie class ID.
+ */
+forward zp_fw_class_zombie_init_post(id, classid)

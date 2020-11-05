@@ -10,6 +10,7 @@
 ================================================================================*/
 
 #include <amxmodx>
+#include <engine>
 #include <fun>
 #include <fakemeta>
 #include <hamsandwich>
@@ -273,6 +274,9 @@ public fw_SetModel(entity, const model[])
 	
 	// Narrow down our matches a bit
 	if (model[7] != 'w' || model[8] != '_')
+		return;
+	
+	if(!is_valid_ent(entity))
 		return;
 	
 	// Get damage time of grenade

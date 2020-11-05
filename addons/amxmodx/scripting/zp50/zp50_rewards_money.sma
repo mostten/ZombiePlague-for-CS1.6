@@ -19,8 +19,6 @@
 #include <zp50_class_nemesis>
 #define LIBRARY_SURVIVOR "zp50_class_survivor"
 #include <zp50_class_survivor>
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
 
 #define MAXPLAYERS 32
 #define CS_MONEY_LIMIT 16000
@@ -45,7 +43,7 @@ new cvar_money_winner, cvar_money_loser
 new cvar_money_damage, cvar_money_zombie_damaged_hp, cvar_money_human_damaged_hp
 new cvar_money_zombie_killed, cvar_money_human_killed
 new cvar_money_human_infected
-new cvar_money_nemesis_ignore, cvar_money_survivor_ignore, cvar_money_ghost_ignore
+new cvar_money_nemesis_ignore, cvar_money_survivor_ignore
 
 public plugin_init()
 {
@@ -73,10 +71,6 @@ public plugin_init()
 	if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library))
 		cvar_money_survivor_ignore = register_cvar("zp_money_survivor_ignore", "0")
 	
-	// Ghost Class loaded?
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library))
-		cvar_money_ghost_ignore = register_cvar("zp_money_ghost_ignore", "0")
-	
 	RegisterHam(Ham_TakeDamage, "player", "fw_TakeDamage_Post", 1)
 	RegisterHamBots(Ham_TakeDamage, "fw_TakeDamage_Post", 1)
 	RegisterHam(Ham_Killed, "player", "fw_PlayerKilled")
@@ -97,7 +91,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -122,10 +116,6 @@ public fw_TakeDamage_Post(victim, inflictor, attacker, Float:damage, damage_type
 {
 	// Non-player damage or self damage
 	if (victim == attacker || !is_user_alive(attacker))
-		return;
-	
-	// Ignore money rewards for Ghost?
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(attacker) && get_pcvar_num(cvar_money_ghost_ignore))
 		return;
 	
 	// Ignore money rewards for Nemesis?
@@ -198,13 +188,6 @@ public fw_PlayerKilled_Post(victim, attacker, shouldgib)
 		
 	// Restore CS money message block status
 	set_msg_block(g_MsgMoney, g_MsgMoneyBlockStatus)
-	
-	// Ignore money rewards for Ghost?
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(attacker) && get_pcvar_num(cvar_money_ghost_ignore))
-	{
-		cs_set_user_money(attacker, g_MoneyBeforeKill[attacker])
-		return;
-	}
 	
 	// Ignore money rewards for Nemesis?
 	if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(attacker) && get_pcvar_num(cvar_money_nemesis_ignore))

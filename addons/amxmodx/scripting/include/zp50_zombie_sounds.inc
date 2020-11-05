@@ -35,26 +35,6 @@
 native zp_zombie_register_sound(zombie_class, const pain[] = "", const die[] = "", const fall[] = "", const miss_slash[] = "", const miss_wall[] = "", const hit_normal[] = "", const hit_stab[] = "", const idle[] = "", const idle_last[] = "", const head_shot[] = "", const step[] = "");
 
 /**
- * Registers a custom sounds which will be added to the ghost sounds of ZP.
- *
- * Note: The returned sounds ID can be later used to identify
- *
- * @param ghost_class	class id.
- * @param pain			sound pain.
- * @param die			sound die.
- * @param fall			sound fall.
- * @param miss_slash	sound miss slash.
- * @param miss_wall		sound miss wall.
- * @param hit_normal	sound hit normal.
- * @param hit_stab		sound hit stab.
- * @param idle			sound idle.
- * @param idle_last		sound idle last.
- * @param head_shot		sound head shot
- * @param step			sound step
- */
-native zp_ghost_register_sound(ghost_class, const pain[] = "", const die[] = "", const fall[] = "", const miss_slash[] = "", const miss_wall[] = "", const hit_normal[] = "", const hit_stab[] = "", const idle[] = "", const idle_last[] = "", const head_shot[] = "", const step[] = "");
-
-/**
  * Registers a custom sounds which will be added to the human sounds of ZP.
  *
  * Note: The returned sounds ID can be later used to identify

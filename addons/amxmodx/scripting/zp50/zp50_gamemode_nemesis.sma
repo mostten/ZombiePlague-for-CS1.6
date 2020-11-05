@@ -33,9 +33,17 @@ new Array:g_sound_nemesis
 #define HUD_EVENT_G 20
 #define HUD_EVENT_B 20
 
+enum _:TOTAL_FORWARDS
+{
+	FW_ROUND_STARTED = 0
+};
+new g_Forwards[TOTAL_FORWARDS];
+new g_ForwardResult;
+
 new g_MaxPlayers
 new g_HudSync
 new g_TargetPlayer
+new g_NemesisMode
 
 new cvar_nemesis_chance, cvar_nemesis_min_players
 new cvar_nemesis_show_hud, cvar_nemesis_sounds
@@ -45,7 +53,7 @@ public plugin_precache()
 {
 	// Register game mode at precache (plugin gets paused after this)
 	register_plugin("[ZP] Game Mode: Nemesis", ZP_VERSION_STRING, "ZP Dev Team")
-	zp_gamemodes_register("Nemesis Mode")
+	g_NemesisMode = zp_gamemodes_register("Nemesis Mode")
 	
 	// Create the HUD Sync Objects
 	g_HudSync = CreateHudSyncObj()
@@ -88,22 +96,27 @@ public plugin_precache()
 		else
 			precache_sound(sound)
 	}
+	
+	g_Forwards[FW_ROUND_STARTED] = CreateMultiForward("zp_fw_nemesis_started", ET_IGNORE, FP_CELL);
 }
 
 // Deathmatch module's player respawn forward
 public zp_fw_deathmatch_respawn_pre(id)
 {
 	// Respawning allowed?
-	if (!get_pcvar_num(cvar_nemesis_allow_respawn))
-		return PLUGIN_HANDLED;
-	
+	if (is_nemesis_mod(zp_gamemodes_get_current()))
+	{
+		if(!get_pcvar_num(cvar_nemesis_allow_respawn))
+			return PLUGIN_HANDLED;
+	}
 	return PLUGIN_CONTINUE;
 }
 
 public zp_fw_core_spawn_post(id)
 {
 	// Always respawn as human on nemesis rounds
-	zp_core_respawn_as_zombie(id, false)
+	if(is_nemesis_mod(zp_gamemodes_get_current()))
+		zp_core_respawn_as_zombie(id, false)
 }
 
 public zp_fw_gamemodes_choose_pre(game_mode_id, skipchecks)
@@ -129,10 +142,10 @@ public zp_fw_gamemodes_choose_post(game_mode_id, target_player)
 	g_TargetPlayer = (target_player == RANDOM_TARGET_PLAYER) ? GetRandomAlive(random_num(1, GetAliveCount())) : target_player
 }
 
-public zp_fw_gamemodes_start()
+public zp_fw_gamemodes_start(game_mode_id)
 {
-	// Turn player into nemesis
-	zp_class_nemesis_set(g_TargetPlayer)
+	if(!is_nemesis_mod(game_mode_id))
+		return;
 	
 	// Remaining players should be humans (CTs)
 	new id
@@ -142,13 +155,12 @@ public zp_fw_gamemodes_start()
 		if (!is_user_alive(id))
 			continue;
 		
-		// This is our Nemesis
-		if (zp_class_nemesis_get(id))
-			continue;
-		
 		// Switch to CT
 		cs_set_player_team(id, CS_TEAM_CT)
 	}
+	
+	// Turn player into nemesis
+	zp_class_nemesis_set(g_TargetPlayer)
 	
 	// Play Nemesis sound
 	if (get_pcvar_num(cvar_nemesis_sounds))
@@ -166,6 +178,16 @@ public zp_fw_gamemodes_start()
 		set_hudmessage(HUD_EVENT_R, HUD_EVENT_G, HUD_EVENT_B, HUD_EVENT_X, HUD_EVENT_Y, 1, 0.0, 5.0, 1.0, 1.0, -1)
 		ShowSyncHudMsg(0, g_HudSync, "%L", LANG_PLAYER, "NOTICE_NEMESIS", name)
 	}
+	
+	ExecuteForward(g_Forwards[FW_ROUND_STARTED], g_ForwardResult, g_TargetPlayer);
+}
+
+public zp_fw_class_zombie_menu_show_pre(id)
+{
+	if (is_nemesis_mod(zp_gamemodes_get_current()))
+		return PLUGIN_HANDLED;
+	
+	return PLUGIN_CONTINUE;
 }
 
 // Plays a sound on clients
@@ -206,4 +228,9 @@ GetRandomAlive(target_index)
 	}
 	
 	return -1;
+}
+
+bool:is_nemesis_mod(game_mode_id)
+{
+	return g_NemesisMode != ZP_INVALID_GAME_MODE && game_mode_id == g_NemesisMode;
 }

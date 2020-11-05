@@ -52,15 +52,6 @@ native zp_admin_commands_nemesis(id, player)
 native zp_admin_commands_survivor(id, player)
 
 /**
- * Manually executes admin command: zp_ghost.
- *
- * @param id		Admin player index.
- * @param player	Target player index.
- * @return			True on success, false otherwise.
- */
-native zp_admin_commands_ghost(id, player)
-
-/**
  * Manually executes admin command: zp_respawn.
  *
  * @param id		Admin player index.

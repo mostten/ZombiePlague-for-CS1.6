@@ -17,7 +17,6 @@
 #include <zp50_gamemodes>
 
 #define TASK_RESPAWN 100
-#define ID_RESPAWN (taskid - TASK_RESPAWN)
 
 // Custom Forwards
 enum _:TOTAL_FORWARDS
@@ -32,7 +31,7 @@ new g_GameModeStarted
 
 new cvar_deathmatch, cvar_respawn_delay
 new cvar_respawn_zombies, cvar_respawn_humans
-new cvar_respawn_on_suicide
+new cvar_respawn_on_suicide, cvar_zombie_headshot_die
 
 public plugin_init()
 {
@@ -40,14 +39,13 @@ public plugin_init()
 	
 	RegisterHam(Ham_Spawn, "player", "fw_PlayerSpawn_Post", 1)
 	RegisterHamBots(Ham_Spawn, "fw_PlayerSpawn_Post", 1)
-	RegisterHam(Ham_Killed, "player", "fw_PlayerKilled_Post", 1)
-	RegisterHamBots(Ham_Killed, "fw_PlayerKilled_Post", 1)
 	
 	cvar_deathmatch = register_cvar("zp_deathmatch", "0")
 	cvar_respawn_delay = register_cvar("zp_respawn_delay", "5")
 	cvar_respawn_zombies = register_cvar("zp_respawn_zombies", "1")
 	cvar_respawn_humans = register_cvar("zp_respawn_humans", "1")
 	cvar_respawn_on_suicide = register_cvar("zp_respawn_on_suicide", "0")
+	cvar_zombie_headshot_die = register_cvar("zp_zombie_headshot_die", "1")
 	
 	g_MaxPlayers = get_maxplayers()
 	
@@ -65,41 +63,58 @@ public fw_PlayerSpawn_Post(id)
 	remove_task(id+TASK_RESPAWN)
 }
 
-// Ham Player Killed Post Forward
-public fw_PlayerKilled_Post(victim, attacker, shouldgib)
+public client_death(killer, victim, wpnindex, hitplace, TK)
 {
-	// Respawn if deathmatch is enabled
-	if (get_pcvar_num(cvar_deathmatch))
+	if(get_pcvar_num(cvar_deathmatch))
 	{
 		// Respawn on suicide?
-		if (!get_pcvar_num(cvar_respawn_on_suicide) && (victim == attacker || !is_user_connected(attacker)))
+		if(!get_pcvar_num(cvar_respawn_on_suicide) && (victim == killer || !is_user_connected(killer)))
 			return;
 		
 		// Respawn if human/zombie?
-		if ((zp_core_is_zombie(victim) && !get_pcvar_num(cvar_respawn_zombies)) || (!zp_core_is_zombie(victim) && !get_pcvar_num(cvar_respawn_humans)))
+		new bool:zombie = zp_core_is_zombie(victim);
+		if(zombie)
+		{
+			if(!get_pcvar_num(cvar_respawn_zombies))
+				return;
+			
+			// Headshot Respawn?
+			if(get_pcvar_num(cvar_zombie_headshot_die) && hitplace == HIT_HEAD)
+				return;
+		}
+		else if(!get_pcvar_num(cvar_respawn_humans))
 			return;
 		
 		// Set the respawn task
-		set_task(get_pcvar_float(cvar_respawn_delay), "respawn_player_task", victim+TASK_RESPAWN)
+		new data_pack[2];
+		data_pack[0] = victim;
+		data_pack[1] = zombie?1:0;
+		set_task(get_pcvar_float(cvar_respawn_delay), "respawn_player_task", victim+TASK_RESPAWN, data_pack, sizeof(data_pack));
 	}
 }
 
 // Respawn Player Task (deathmatch)
-public respawn_player_task(taskid)
+public respawn_player_task(data_pack[2])
 {
-	// Already alive or round ended
-	if (is_user_alive(ID_RESPAWN) || zp_gamemodes_get_current() == ZP_NO_GAME_MODE)
+	// Already alive
+	new client = data_pack[0];
+	new bool:zombie = data_pack[1] == 1;
+	if(!is_user_valid(client) || is_user_alive(client))
+		return;
+	
+	// Already round ended
+	if(zp_gamemodes_get_current() == ZP_NO_GAME_MODE)
 		return;
 	
 	// Get player's team
-	new CsTeams:team = cs_get_user_team(ID_RESPAWN)
+	new CsTeams:team = cs_get_user_team(client)
 	
 	// Player moved to spectators
 	if (team == CS_TEAM_SPECTATOR || team == CS_TEAM_UNASSIGNED)
 		return;
 	
 	// Allow other plugins to decide whether player can respawn or not
-	ExecuteForward(g_Forwards[FW_USER_RESPAWN_PRE], g_ForwardResult, ID_RESPAWN)
+	ExecuteForward(g_Forwards[FW_USER_RESPAWN_PRE], g_ForwardResult, client)
 	if (g_ForwardResult >= PLUGIN_HANDLED)
 		return;
 	
@@ -107,17 +122,24 @@ public respawn_player_task(taskid)
 	if (get_pcvar_num(cvar_deathmatch) == 2 || (get_pcvar_num(cvar_deathmatch) == 3 && random_num(0, 1)) || (get_pcvar_num(cvar_deathmatch) == 4 && zp_core_get_zombie_count() < GetAliveCount()/2))
 	{
 		// Only allow respawning as zombie after a game mode started
-		if (g_GameModeStarted) zp_core_respawn_as_zombie(ID_RESPAWN, true)
+		if (g_GameModeStarted)
+		{
+			zombie = true;
+			zp_core_respawn_as_zombie(client, zombie);
+		}
 	}
 	
-	respawn_player_manually(ID_RESPAWN)
+	respawn_player_manually(client, zombie)
 }
 
 // Respawn Player Manually (called after respawn checks are done)
-respawn_player_manually(id)
+respawn_player_manually(id, bool:zombie)
 {
 	// Respawn!
-	ExecuteHamB(Ham_CS_RoundRespawn, id)
+	ExecuteHamB(Ham_CS_RoundRespawn, id);
+	
+	// Respawn as zombie
+	if(zombie){zp_core_force_infect(id);}
 }
 
 public client_disconnected(id)
@@ -139,6 +161,11 @@ public zp_fw_gamemodes_end()
 	new id
 	for (id = 1; id <= g_MaxPlayers; id++)
 		remove_task(id+TASK_RESPAWN)
+}
+
+bool:is_user_valid(id)
+{
+	return (1 <= id <= g_MaxPlayers && is_user_connected(id));
 }
 
 // Get Alive Count -returns alive players number-

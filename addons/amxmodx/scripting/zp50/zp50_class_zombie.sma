@@ -21,10 +21,6 @@
 #include <zp50_colorchat>
 #include <zp50_class_zombie_const>
 
-//Ghost模式扩展
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
-
 // Zombie Classes file
 new const ZP_ZOMBIECLASSES_FILE[] = "zp_zombieclasses.ini"
 
@@ -33,12 +29,17 @@ new const ZP_ZOMBIECLASSES_FILE[] = "zp_zombieclasses.ini"
 #define ZOMBIES_DEFAULT_NAME "Zombie"
 #define ZOMBIES_DEFAULT_DESCRIPTION "Default"
 #define ZOMBIES_DEFAULT_HEALTH 1800
+#define ZOMBIES_DEFAULT_BASE_HEALTH	1800
 #define ZOMBIES_DEFAULT_SPEED 0.75
 #define ZOMBIES_DEFAULT_GRAVITY 1.0
 #define ZOMBIES_DEFAULT_DMULTIPLIER 1.0
 #define ZOMBIES_DEFAULT_MODEL "zombie"
 #define ZOMBIES_DEFAULT_CLAWMODEL "models/zombie_plague/v_knife_zombie.mdl"
 #define ZOMBIES_DEFAULT_KNOCKBACK 1.0
+#define DEFAULT_INTERVAL_PRIMARYATTACK -1.0
+#define DEFAULT_INTERVAL_SECONDARYATTACK -1.0
+#define DEFAULT_DAMAGE_PRIMARYATTACK -1.0
+#define DEFAULT_DAMAGE_SECONDARYATTACK -1.0
 
 // Allowed weapons for zombies
 const ZOMBIE_ALLOWED_WEAPONS_BITSUM = (1<<CSW_KNIFE)|(1<<CSW_HEGRENADE)|(1<<CSW_FLASHBANG)|(1<<CSW_SMOKEGRENADE)|(1<<CSW_C4)
@@ -54,8 +55,12 @@ new g_menu_data[MAXPLAYERS+1]
 enum _:TOTAL_FORWARDS
 {
 	FW_CLASS_SELECT_PRE = 0,
-	FW_CLASS_SELECT_POST
-}
+	FW_CLASS_SELECT_POST,
+	FW_CLASS_MENU_SHOW_PRE,
+	FW_CLASS_INIT_PRE,
+	FW_CLASS_INIT_POST
+};
+
 new g_Forwards[TOTAL_FORWARDS]
 new g_ForwardResult
 
@@ -64,6 +69,7 @@ new Array:g_ZombieClassRealName
 new Array:g_ZombieClassName
 new Array:g_ZombieClassDesc
 new Array:g_ZombieClassHealth
+new Array:g_ZombieClassBaseHealth
 new Array:g_ZombieClassSpeed
 new Array:g_ZombieClassGravity
 new Array:g_ZombieClassDMFile
@@ -75,9 +81,15 @@ new Array:g_ZombieClassModelsHandle
 new Array:g_ZombieClassClawsFile
 new Array:g_ZombieClassClawsHandle
 new Array:g_ZombieClassAllowInfection
+new Array:g_IntervalPrimaryAttack
+new Array:g_IntervalSecondaryAttack
+new Array:g_DamagePrimaryAttack
+new Array:g_DamageSecondaryAttack
 new Array:g_ZombieClassAllowBlood
 new g_ZombieClass[MAXPLAYERS+1]
 new g_ZombieClassNext[MAXPLAYERS+1]
+new g_ZombieClassTemp[MAXPLAYERS+1]
+new g_ZombieHealthMax[MAXPLAYERS+1]
 new g_AdditionalMenuText[32]
 
 public plugin_init()
@@ -87,8 +99,11 @@ public plugin_init()
 	register_clcmd("say /zclass", "show_menu_zombieclass")
 	register_clcmd("say /class", "show_class_menu")
 	
-	g_Forwards[FW_CLASS_SELECT_PRE] = CreateMultiForward("zp_fw_class_zombie_select_pre", ET_CONTINUE, FP_CELL, FP_CELL)
-	g_Forwards[FW_CLASS_SELECT_POST] = CreateMultiForward("zp_fw_class_zombie_select_post", ET_CONTINUE, FP_CELL, FP_CELL)
+	g_Forwards[FW_CLASS_SELECT_PRE] = CreateMultiForward("zp_fw_class_zombie_select_pre", ET_CONTINUE, FP_CELL, FP_CELL);
+	g_Forwards[FW_CLASS_SELECT_POST] = CreateMultiForward("zp_fw_class_zombie_select_post", ET_IGNORE, FP_CELL, FP_CELL);
+	g_Forwards[FW_CLASS_MENU_SHOW_PRE] = CreateMultiForward("zp_fw_class_zombie_menu_show_pre", ET_CONTINUE, FP_CELL);
+	g_Forwards[FW_CLASS_INIT_PRE] = CreateMultiForward("zp_fw_class_zombie_init_pre", ET_CONTINUE, FP_CELL, FP_CELL);
+	g_Forwards[FW_CLASS_INIT_POST] = CreateMultiForward("zp_fw_class_zombie_init_post", ET_IGNORE, FP_CELL, FP_CELL);
 }
 
 public plugin_precache()
@@ -112,6 +127,7 @@ public plugin_cfg()
 		ArrayPushString(g_ZombieClassName, ZOMBIES_DEFAULT_NAME)
 		ArrayPushString(g_ZombieClassDesc, ZOMBIES_DEFAULT_DESCRIPTION)
 		ArrayPushCell(g_ZombieClassHealth, ZOMBIES_DEFAULT_HEALTH)
+		ArrayPushCell(g_ZombieClassBaseHealth, ZOMBIES_DEFAULT_BASE_HEALTH)
 		ArrayPushCell(g_ZombieClassSpeed, ZOMBIES_DEFAULT_SPEED)
 		ArrayPushCell(g_ZombieClassGravity, ZOMBIES_DEFAULT_GRAVITY)
 		ArrayPushCell(g_ZombieClassDMFile, false)
@@ -124,6 +140,10 @@ public plugin_cfg()
 		ArrayPushCell(g_ZombieClassClawsHandle, Invalid_Array)
 		ArrayPushCell(g_ZombieClassAllowInfection, true)
 		ArrayPushCell(g_ZombieClassAllowBlood, true)
+		ArrayPushCell(g_IntervalPrimaryAttack, DEFAULT_INTERVAL_PRIMARYATTACK)
+		ArrayPushCell(g_IntervalSecondaryAttack, DEFAULT_INTERVAL_SECONDARYATTACK)
+		ArrayPushCell(g_DamagePrimaryAttack, DEFAULT_DAMAGE_PRIMARYATTACK)
+		ArrayPushCell(g_DamageSecondaryAttack, DEFAULT_DAMAGE_SECONDARYATTACK)
 		g_ZombieClassCount++
 	}
 }
@@ -132,8 +152,10 @@ public plugin_natives()
 {
 	register_library("zp50_class_zombie")
 	register_native("zp_class_zombie_get_current", "native_class_zombie_get_current")
+	register_native("zp_class_zombie_set_current", "native_class_zombie_set_current")
 	register_native("zp_class_zombie_get_next", "native_class_zombie_get_next")
 	register_native("zp_class_zombie_set_next", "native_class_zombie_set_next")
+	register_native("zp_class_zombie_set_next_once", "native_class_zombie_set_next_one")
 	register_native("zp_class_zombie_get_max_health", "_class_zombie_get_max_health")
 	register_native("zp_class_zombie_register", "native_class_zombie_register")
 	register_native("zp_class_zombie_register_model", "_class_zombie_register_model")
@@ -148,6 +170,10 @@ public plugin_natives()
 	register_native("zp_class_zombie_get_dm", "native_class_zombie_get_dm")
 	register_native("zp_class_zombie_get_infection", "_class_zombie_get_infection")
 	register_native("zp_class_zombie_get_blood", "_class_zombie_get_blood")
+	register_native("zp_class_zombie_get_pi", "_get_interval_primary_attack")
+	register_native("zp_class_zombie_get_si", "_get_interval_secondary_attack")
+	register_native("zp_class_zombie_get_pd", "_get_damage_primary_attack")
+	register_native("zp_class_zombie_get_sd", "_get_damage_secondary_attack")
 	register_native("zp_class_zombie_get_count", "native_class_zombie_get_count")
 	register_native("zp_class_zombie_show_menu", "native_class_zombie_show_menu")
 	register_native("zp_class_zombie_menu_text_add", "_class_zombie_menu_text_add")
@@ -157,6 +183,7 @@ public plugin_natives()
 	g_ZombieClassName = ArrayCreate(32, 1)
 	g_ZombieClassDesc = ArrayCreate(32, 1)
 	g_ZombieClassHealth = ArrayCreate(1, 1)
+	g_ZombieClassBaseHealth = ArrayCreate(1, 1)
 	g_ZombieClassSpeed = ArrayCreate(1, 1)
 	g_ZombieClassGravity = ArrayCreate(1, 1)
 	g_ZombieClassDMFile = ArrayCreate(1, 1)
@@ -169,30 +196,17 @@ public plugin_natives()
 	g_ZombieClassClawsFile = ArrayCreate(1, 1)
 	g_ZombieClassAllowInfection = ArrayCreate(1, 1)
 	g_ZombieClassAllowBlood = ArrayCreate(1, 1)
-	
-	set_module_filter("module_filter")
-	set_native_filter("native_filter")
-}
-
-public module_filter(const module[])
-{
-	if (equal(module, LIBRARY_GHOST))
-		return PLUGIN_HANDLED;
-	
-	return PLUGIN_CONTINUE;
-}
-public native_filter(const name[], index, trap)
-{
-	if (!trap)
-		return PLUGIN_HANDLED;
-		
-	return PLUGIN_CONTINUE;
+	g_IntervalPrimaryAttack = ArrayCreate(1, 1)
+	g_IntervalSecondaryAttack = ArrayCreate(1, 1)
+	g_DamagePrimaryAttack = ArrayCreate(1, 1)
+	g_DamageSecondaryAttack = ArrayCreate(1, 1)
 }
 
 public client_putinserver(id)
 {
-	g_ZombieClass[id] = ZP_INVALID_ZOMBIE_CLASS
-	g_ZombieClassNext[id] = ZP_INVALID_ZOMBIE_CLASS
+	g_ZombieClass[id] = ZP_INVALID_ZOMBIE_CLASS;
+	g_ZombieClassNext[id] = ZP_INVALID_ZOMBIE_CLASS;
+	g_ZombieClassTemp[id] = ZP_INVALID_ZOMBIE_CLASS;
 }
 
 public client_disconnected(id)
@@ -209,6 +223,11 @@ public show_class_menu(id)
 
 public show_menu_zombieclass(id)
 {
+	// Execute show class menu attempt forward
+	ExecuteForward(g_Forwards[FW_CLASS_MENU_SHOW_PRE], g_ForwardResult, id);
+	if (g_ForwardResult >= PLUGIN_HANDLED)
+		return;
+	
 	static menu[128], name[32], description[32], transkey[64]
 	new menuid, itemdata[2], index
 	
@@ -325,55 +344,92 @@ public menu_zombieclass(id, menuid, item)
 
 public zp_fw_core_infect_post(id, attacker)
 {
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(id))
-		return;
-	// Show zombie class menu if they haven't chosen any (e.g. just connected)
-	if (g_ZombieClassNext[id] == ZP_INVALID_ZOMBIE_CLASS)
+	if(g_ZombieClassTemp[id] == ZP_INVALID_ZOMBIE_CLASS)
 	{
-		if (g_ZombieClassCount > 1)
-			show_menu_zombieclass(id)
-		else // If only one class is registered, choose it automatically
-			g_ZombieClassNext[id] = 0
-	}
-	
-	// Bots pick class automatically
-	if (is_user_bot(id))
-	{
-		// Try choosing class
-		new index, start_index = random_num(0, g_ZombieClassCount - 1)
-		for (index = start_index + 1; /* no condition */; index++)
+		// Show zombie class menu if they haven't chosen any (e.g. just connected)
+		new random_classid = get_random_zombie(id);
+		if (g_ZombieClassNext[id] == ZP_INVALID_ZOMBIE_CLASS)
 		{
-			// Start over when we reach the end
-			if (index >= g_ZombieClassCount)
-				index = 0
-			
-			// Execute class select attempt forward
-			ExecuteForward(g_Forwards[FW_CLASS_SELECT_PRE], g_ForwardResult, id, index)
-			
-			// Class available to player?
-			if (g_ForwardResult < ZP_CLASS_NOT_AVAILABLE)
-			{
-				g_ZombieClassNext[id] = index
-				break;
-			}
-			
-			// Loop completed, no class could be chosen
-			if (index == start_index)
-				break;
+			if (get_valid_class_count(id) > 1)
+				show_menu_zombieclass(id);
+			else // If only one class is registered, choose it automatically
+				g_ZombieClassNext[id] = random_classid;
 		}
+		
+		// Bots pick class automatically
+		if (is_user_bot(id))
+		{
+			// Try choosing class
+			g_ZombieClassNext[id] = random_classid;
+		}
+		
+		// Set selected zombie class. If none selected yet, use the first one
+		g_ZombieClass[id] = g_ZombieClassNext[id]
+		if (g_ZombieClass[id] == ZP_INVALID_ZOMBIE_CLASS){g_ZombieClass[id] = random_classid;}
+	}
+	else
+	{
+		g_ZombieClass[id] = g_ZombieClassTemp[id];
+		g_ZombieClassTemp[id] = ZP_INVALID_ZOMBIE_CLASS;
 	}
 	
-	// Set selected zombie class. If none selected yet, use the first one
-	g_ZombieClass[id] = g_ZombieClassNext[id]
-	if (g_ZombieClass[id] == ZP_INVALID_ZOMBIE_CLASS) g_ZombieClass[id] = 0
+	// Apply zombie infos
+	apply_zombie_info(id, g_ZombieClass[id]);
+}
+
+get_valid_class_count(id)
+{
+	new count = 0;
+	for(new classid = 0; classid < g_ZombieClassCount; classid++)
+	{
+		// Execute class select attempt forward
+		ExecuteForward(g_Forwards[FW_CLASS_SELECT_PRE], g_ForwardResult, id, classid);
+		
+		// Class available to player?
+		if (g_ForwardResult < ZP_CLASS_NOT_AVAILABLE)
+			count++;
+	}
+	return count;
+}
+
+get_random_zombie(id)
+{
+	new Array:zombies = ArrayCreate(1, 1);
+	
+	for(new classid = 0; classid < g_ZombieClassCount; classid++)
+	{
+		// Execute class select attempt forward
+		ExecuteForward(g_Forwards[FW_CLASS_SELECT_PRE], g_ForwardResult, id, classid);
+		
+		// Class available to player?
+		if (g_ForwardResult < ZP_CLASS_NOT_AVAILABLE)
+			ArrayPushCell(zombies, classid);
+	}
+	
+	new zombie_select = 0;
+	new zombie_count = ArraySize(zombies);
+	if(zombie_count > 0)
+		zombie_select = ArrayGetCell(zombies, random_num(0, zombie_count - 1));
+	
+	ArrayDestroy(zombies);
+	
+	return zombie_select;
+}
+
+apply_zombie_info(id, classid)
+{
+	ExecuteForward(g_Forwards[FW_CLASS_INIT_PRE], g_ForwardResult, id, classid);
+	if (g_ForwardResult >= PLUGIN_HANDLED)
+		return;
 	
 	// Apply zombie attributes
-	set_user_health(id, ArrayGetCell(g_ZombieClassHealth, g_ZombieClass[id]))
-	set_user_gravity(id, Float:ArrayGetCell(g_ZombieClassGravity, g_ZombieClass[id]))
-	cs_set_player_maxspeed_auto(id, Float:ArrayGetCell(g_ZombieClassSpeed, g_ZombieClass[id]))
+	g_ZombieHealthMax[id] = (ArrayGetCell(g_ZombieClassHealth, classid) == 0)?(ArrayGetCell(g_ZombieClassBaseHealth, classid)*GetAliveCount()):(ArrayGetCell(g_ZombieClassHealth, classid));
+	set_user_health(id, g_ZombieHealthMax[id]);
+	set_user_gravity(id, Float:ArrayGetCell(g_ZombieClassGravity, classid))
+	cs_set_player_maxspeed_auto(id, Float:ArrayGetCell(g_ZombieClassSpeed, classid))
 	
 	// Apply zombie player model
-	new Array:class_models = ArrayGetCell(g_ZombieClassModelsHandle, g_ZombieClass[id])
+	new Array:class_models = ArrayGetCell(g_ZombieClassModelsHandle, classid)
 	if (class_models != Invalid_Array)
 	{
 		new index = random_num(0, ArraySize(class_models) - 1)
@@ -388,7 +444,7 @@ public zp_fw_core_infect_post(id, attacker)
 	}
 	
 	// Apply zombie claw model
-	new claw_model[64], Array:class_claws = ArrayGetCell(g_ZombieClassClawsHandle, g_ZombieClass[id])
+	new claw_model[64], Array:class_claws = ArrayGetCell(g_ZombieClassClawsHandle, classid)
 	if (class_claws != Invalid_Array)
 	{
 		new index = random_num(0, ArraySize(class_claws) - 1)
@@ -404,12 +460,12 @@ public zp_fw_core_infect_post(id, attacker)
 	
 	// Apply weapon restrictions for zombies
 	cs_set_player_weap_restrict(id, true, ZOMBIE_ALLOWED_WEAPONS_BITSUM, ZOMBIE_DEFAULT_ALLOWED_WEAPON)
+	
+	ExecuteForward(g_Forwards[FW_CLASS_INIT_POST], g_ForwardResult, id, classid);
 }
 
 public zp_fw_core_cure(id, attacker)
 {
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(id))
-		return;
 	// Remove zombie claw models
 	cs_reset_player_view_model(id, CSW_KNIFE)
 	cs_reset_player_weap_model(id, CSW_KNIFE)
@@ -429,6 +485,33 @@ public native_class_zombie_get_current(plugin_id, num_params)
 	}
 	
 	return g_ZombieClass[id];
+}
+
+public native_class_zombie_set_current(plugin_id, num_params)
+{
+	new id = get_param(1);
+	
+	if (!is_user_connected(id))
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", id);
+		return false;
+	}
+	
+	new classid = get_param(2);
+	
+	
+	if (classid < 0 || classid >= g_ZombieClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid zombie class id (%d)", classid);
+		return false;
+	}
+	
+	g_ZombieClassTemp[id] = classid;
+	
+	if(zp_core_is_zombie(id)){zp_core_force_infect(id);}
+	else{zp_core_infect(id, id);}
+	
+	return true;
 }
 
 public native_class_zombie_get_next(plugin_id, num_params)
@@ -466,6 +549,28 @@ public native_class_zombie_set_next(plugin_id, num_params)
 	return true;
 }
 
+public native_class_zombie_set_next_one(plugin_id, num_params)
+{
+	new id = get_param(1)
+	
+	if (!is_user_connected(id))
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid Player (%d)", id)
+		return false;
+	}
+	
+	new classid = get_param(2)
+	
+	if (classid < 0 || classid >= g_ZombieClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid zombie class id (%d)", classid)
+		return false;
+	}
+	
+	g_ZombieClassTemp[id] = classid;
+	return true;
+}
+
 public _class_zombie_get_max_health(plugin_id, num_params)
 {
 	new id = get_param(1)
@@ -476,15 +581,7 @@ public _class_zombie_get_max_health(plugin_id, num_params)
 		return -1;
 	}
 	
-	new classid = get_param(2)
-	
-	if (classid < 0 || classid >= g_ZombieClassCount)
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Invalid zombie class id (%d)", classid)
-		return -1;
-	}
-	
-	return ArrayGetCell(g_ZombieClassHealth, classid);
+	return g_ZombieHealthMax[id];
 }
 
 public native_class_zombie_register(plugin_id, num_params)
@@ -515,7 +612,12 @@ public native_class_zombie_register(plugin_id, num_params)
 	new Float:speed = get_param_f(4)
 	new Float:gravity = get_param_f(5)
 	new bool:infection = (get_param(6) > 0)
-	new bool:blood = (get_param(7) > 0)
+	new Float:intervalPrimaryAttack = get_param_f(7)
+	new Float:intervalSecondaryAttack = get_param_f(8)
+	new Float:damagePrimaryAttack = get_param_f(9)
+	new Float:damageSecondaryAttack = get_param_f(10)
+	new bool:blood = (get_param(11) > 0)
+	new base_health = get_param(12)
 	
 	// Load settings from zombie classes file
 	new real_name[32]
@@ -593,10 +695,25 @@ public native_class_zombie_register(plugin_id, num_params)
 		amx_save_setting_int(ZP_ZOMBIECLASSES_FILE, real_name, "HEALTH", health)
 	ArrayPushCell(g_ZombieClassHealth, health)
 	
+	// Base Health
+	health_math_register(real_name, base_health);
+	
 	// Speed
 	if (!amx_load_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "SPEED", speed))
 		amx_save_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "SPEED", speed)
 	ArrayPushCell(g_ZombieClassSpeed, speed)
+	
+	// Interval PrimaryAttack
+	interval_primary_register(real_name, intervalPrimaryAttack);
+	
+	// Interval SecondaryAttack
+	interval_secondary_register(real_name, intervalSecondaryAttack);
+	
+	// Damage PrimaryAttack
+	damage_primary_register(real_name, damagePrimaryAttack);
+	
+	// Damage SecondaryAttack
+	damage_secondary_register(real_name, damageSecondaryAttack);
 	
 	// Gravity
 	if (!amx_load_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "GRAVITY", gravity))
@@ -627,6 +744,61 @@ public native_class_zombie_register(plugin_id, num_params)
 	
 	g_ZombieClassCount++
 	return g_ZombieClassCount - 1;
+}
+
+health_math_register(const real_name[], const base_health = 1800)
+{
+	new math_file;
+	if(!amx_load_setting_int(ZP_ZOMBIECLASSES_FILE, real_name, "BASE HEALTH", math_file))
+	{
+		math_file = base_health;
+		amx_save_setting_int(ZP_ZOMBIECLASSES_FILE, real_name, "BASE HEALTH", math_file);
+	}
+	ArrayPushCell(g_ZombieClassBaseHealth, math_file);
+}
+
+interval_primary_register(const real_name[], const Float:interval = DEFAULT_INTERVAL_PRIMARYATTACK)
+{
+	new Float:interval_file;
+	if(!amx_load_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "PRIMARY ATTACK INTERVAL", interval_file))
+	{
+		interval_file = interval;
+		amx_save_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "PRIMARY ATTACK INTERVAL", interval_file);
+	}
+	ArrayPushCell(g_IntervalPrimaryAttack, interval_file);
+}
+
+interval_secondary_register(const real_name[], const Float:interval = DEFAULT_INTERVAL_SECONDARYATTACK)
+{
+	new Float:interval_file;
+	if(!amx_load_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "SECONDARY ATTACK INTERVAL", interval_file))
+	{
+		interval_file = interval;
+		amx_save_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "SECONDARY ATTACK INTERVAL", interval_file);
+	}
+	ArrayPushCell(g_IntervalSecondaryAttack, interval_file);
+}
+
+damage_primary_register(const real_name[], const Float:damage = DEFAULT_DAMAGE_PRIMARYATTACK)
+{
+	new Float:damage_file;
+	if(!amx_load_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "PRIMARY ATTACK DAMAGE", damage_file))
+	{
+		damage_file = damage;
+		amx_save_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "PRIMARY ATTACK DAMAGE", damage_file);
+	}
+	ArrayPushCell(g_DamagePrimaryAttack, damage_file);
+}
+
+damage_secondary_register(const real_name[], const Float:damage = DEFAULT_DAMAGE_SECONDARYATTACK)
+{
+	new Float:damage_file;
+	if(!amx_load_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "SECONDARY ATTACK DAMAGE", damage_file))
+	{
+		damage_file = damage;
+		amx_save_setting_float(ZP_ZOMBIECLASSES_FILE, real_name, "SECONDARY ATTACK DAMAGE", damage_file);
+	}
+	ArrayPushCell(g_DamageSecondaryAttack, damage_file);
 }
 
 zombie_infection_register(const real_name[], const bool:infection = true)
@@ -912,6 +1084,58 @@ public _class_zombie_get_blood(plugin_id, num_params)
 	return ArrayGetCell(g_ZombieClassAllowBlood, classid) > 0;
 }
 
+public Float:_get_interval_primary_attack(plugin_id, num_params)
+{
+	new classid = get_param(1)
+	
+	if (classid < 0 || classid >= g_ZombieClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid zombie class id (%d)", classid)
+		return DEFAULT_INTERVAL_PRIMARYATTACK;
+	}
+	
+	return ArrayGetCell(g_IntervalPrimaryAttack, classid);
+}
+
+public Float:_get_interval_secondary_attack(plugin_id, num_params)
+{
+	new classid = get_param(1)
+	
+	if (classid < 0 || classid >= g_ZombieClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid zombie class id (%d)", classid)
+		return DEFAULT_INTERVAL_SECONDARYATTACK;
+	}
+	
+	return ArrayGetCell(g_IntervalSecondaryAttack, classid);
+}
+
+public Float:_get_damage_primary_attack(plugin_id, num_params)
+{
+	new classid = get_param(1)
+	
+	if (classid < 0 || classid >= g_ZombieClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid zombie class id (%d)", classid)
+		return DEFAULT_DAMAGE_PRIMARYATTACK;
+	}
+	
+	return ArrayGetCell(g_DamagePrimaryAttack, classid);
+}
+
+public Float:_get_damage_secondary_attack(plugin_id, num_params)
+{
+	new classid = get_param(1)
+	
+	if (classid < 0 || classid >= g_ZombieClassCount)
+	{
+		log_error(AMX_ERR_NATIVE, "[ZP] Invalid zombie class id (%d)", classid)
+		return DEFAULT_DAMAGE_SECONDARYATTACK;
+	}
+	
+	return ArrayGetCell(g_DamageSecondaryAttack, classid);
+}
+
 public native_class_zombie_get_count(plugin_id, num_params)
 {
 	return g_ZombieClassCount;
@@ -936,4 +1160,11 @@ public _class_zombie_menu_text_add(plugin_id, num_params)
 	static text[32]
 	get_string(1, text, charsmax(text))
 	format(g_AdditionalMenuText, charsmax(g_AdditionalMenuText), "%s%s", g_AdditionalMenuText, text)
+}
+
+GetAliveCount()
+{
+	new players[MAXPLAYERS], count;
+	get_players(players, count, "a");
+	return count;
 }

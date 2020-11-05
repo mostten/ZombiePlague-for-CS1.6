@@ -22,10 +22,6 @@
 #define LIBRARY_SURVIVOR "zp50_class_survivor"
 #include <zp50_class_survivor>
 
-//扩展Ghost模式
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
-
 // CS Player PData Offsets (win32)
 const PDATA_SAFE = 2
 const OFFSET_CSDEATHS = 444
@@ -33,10 +29,9 @@ const OFFSET_CSDEATHS = 444
 new g_LastHumanHealthRewarded
 new g_GameModeStarted
 
-new cvar_frags_ghost_killed
 new cvar_frags_zombie_killed
 new cvar_frags_human_killed, cvar_frags_human_infected
-new cvar_frags_nemesis_ignore, cvar_frags_survivor_ignore, cvar_frags_ghost_ignore
+new cvar_frags_nemesis_ignore, cvar_frags_survivor_ignore
 
 new cvar_infection_health_bonus
 new cvar_human_last_health_bonus
@@ -48,7 +43,6 @@ public plugin_init()
 	RegisterHam(Ham_Killed, "player", "fw_PlayerKilled")
 	RegisterHamBots(Ham_Killed, "fw_PlayerKilled")
 	
-	cvar_frags_ghost_killed = register_cvar("zp_frags_ghost_killed", "1")
 	cvar_frags_zombie_killed = register_cvar("zp_frags_zombie_killed", "1")
 	cvar_frags_human_killed = register_cvar("zp_frags_human_killed", "1")
 	cvar_frags_human_infected = register_cvar("zp_frags_human_infected", "1")
@@ -61,10 +55,6 @@ public plugin_init()
 	if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library))
 		cvar_frags_survivor_ignore = register_cvar("zp_frags_survivor_ignore", "0")
 	
-	// Ghost Class loaded?
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library))
-		cvar_frags_ghost_ignore = register_cvar("zp_frags_ghost_ignore", "0")
-	
 	cvar_infection_health_bonus = register_cvar("zp_infection_health_bonus", "100")
 	cvar_human_last_health_bonus = register_cvar("zp_human_last_health_bonus", "50")
 }
@@ -76,7 +66,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -95,23 +85,6 @@ public fw_PlayerKilled(victim, attacker, shouldgib)
 	// Killed by a non-player entity or self killed
 	if (victim == attacker || !is_user_connected(attacker))
 		return;
-	
-	// Ghost Class loaded?
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && get_pcvar_num(cvar_frags_ghost_ignore))
-	{
-		// Human killed ghost, add up the extra frags for kill
-		if(!zp_class_ghost_get(attacker) && get_pcvar_num(cvar_frags_ghost_killed) > 1)
-		{
-			UpdateFrags(attacker, victim, get_pcvar_num(cvar_frags_ghost_killed) - 1, 0, 0)
-			return;
-		}
-		// Ghost killed human, add up the extra frags for kill
-		if (zp_class_ghost_get(attacker) && get_pcvar_num(cvar_frags_human_killed) > 1)
-		{
-			UpdateFrags(attacker, victim, get_pcvar_num(cvar_frags_human_killed) - 1, 0, 0)
-			return;
-		}
-	}
 	
 	// Nemesis Class loaded?
 	if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(attacker) && get_pcvar_num(cvar_frags_nemesis_ignore))

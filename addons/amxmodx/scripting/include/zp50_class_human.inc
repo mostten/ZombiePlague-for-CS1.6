@@ -25,6 +25,15 @@
 native zp_class_human_get_current(id)
 
 /**
+ * Sets a player's current human class ID.
+ *
+ * @param id		Player index.
+ * @param classid	A valid human class ID.
+ * @return			True on success, false otherwise.
+ */
+native bool:zp_class_human_set_current(id, classid)
+
+/**
  * Returns a player's next human class ID (for the next infection).
  *
  * @param id		Player index.
@@ -47,10 +56,9 @@ native zp_class_human_set_next(id, classid)
  * Note: does not take into account any kind of HP bonuses.
  *
  * @param id		Player index.
- * @param classid	A valid human class ID.
  * @return			Maximum amount of health points, -1 on error.
  */
-native zp_class_human_get_max_health(id, classid)
+native zp_class_human_get_max_health(id)
 
 /**
  * Registers a custom class which will be added to the human classes menu of ZP.
@@ -65,7 +73,7 @@ native zp_class_human_get_max_health(id, classid)
  * @param gravity		Class gravity multiplier.
  * @return				An internal human class ID, or ZP_INVALID_HUMAN_CLASS on failure.
  */
-native zp_class_human_register(const name[], const description[], health, Float:speed, Float:gravity, bool:infection = true)
+native zp_class_human_register(const name[], const description[], health, Float:speed, Float:gravity, bool:infection = true, base_health = 100)
 
 /**
  * Registers a custom player model for a given human class.
@@ -75,6 +83,24 @@ native zp_class_human_register(const name[], const description[], health, Float:
  * @return				True on success, false otherwise.
  */
 native zp_class_human_register_model(classid, const model[])
+
+/**
+ * Registers a custom player model for a given human class.
+ *
+ * @param classid		A valid human class ID.
+ * @param view_weapon	Weapon view model's short name.
+ * @return				True on success, false otherwise.
+ */
+native zp_class_human_register_vm(classid, const view_weapon[])
+
+/**
+ * Registers a custom player model for a given human class.
+ *
+ * @param classid		A valid human class ID.
+ * @param weapon_name	Weapon's short name.
+ * @return				True on success, false otherwise.
+ */
+native zp_class_human_register_weapon(classid, const weapon_name[])
 
 /**
  * Registers a human class' damage multiplier.
@@ -137,7 +163,7 @@ native Float:zp_class_human_get_dm(classid)
  * @param classid		A valid human class ID.
  * @return				True if it is allow infection., false otherwise.
  */
-native zp_class_human_get_infection(classid)
+native bool:zp_class_human_get_infection(classid)
 
 /**
  * Returns number of registered human classes.
@@ -181,3 +207,31 @@ forward zp_fw_class_human_select_pre(id, classid)
  * @param classid		Internal human class ID.
  */
 forward zp_fw_class_human_select_post(id, classid)
+
+/**
+ * Called right when class menu show pre.
+ *
+ * Return PLUGIN_HANDLED to block
+ *
+ * @param id			Player index.
+ */
+forward zp_fw_class_human_menu_show_pre(id)
+
+/**
+ * Called right when class init.
+ *
+ * Possible return values are:
+ *	- PLUGIN_HANDLED to block
+ *
+ * @param id			Player index.
+ * @param classid		Internal human class ID.
+ */
+forward zp_fw_class_human_init_pre(id, classid)
+
+/**
+ * Called right when class inited.
+ *
+ * @param id			Player index.
+ * @param classid		Internal human class ID.
+ */
+forward zp_fw_class_human_init_post(id, classid)

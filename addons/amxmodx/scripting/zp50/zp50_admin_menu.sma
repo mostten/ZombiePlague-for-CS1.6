@@ -21,16 +21,11 @@
 #include <zp50_class_nemesis>
 #define LIBRARY_SURVIVOR "zp50_class_survivor"
 #include <zp50_class_survivor>
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
 #include <zp50_admin_commands>
 #include <zp50_colorchat>
 
 // Settings file
 new const ZP_SETTINGS_FILE[] = "zombieplague.ini"
-
-// Settings file for ghost
-new const ZP_GHOST_SETTINGS_FILE[] = "zombieplague_mod_ghost.ini"
 
 #define ACCESSFLAG_MAX_LENGTH 2
 
@@ -39,7 +34,6 @@ new g_access_make_zombie[ACCESSFLAG_MAX_LENGTH] = "d"
 new g_access_make_human[ACCESSFLAG_MAX_LENGTH] = "d"
 new g_access_make_nemesis[ACCESSFLAG_MAX_LENGTH] = "d"
 new g_access_make_survivor[ACCESSFLAG_MAX_LENGTH] = "d"
-new g_access_make_ghost[ACCESSFLAG_MAX_LENGTH] = "d"
 new g_access_respawn_players[ACCESSFLAG_MAX_LENGTH] = "d"
 new g_access_start_game_mode[ACCESSFLAG_MAX_LENGTH] = "d"
 
@@ -49,7 +43,6 @@ enum
 	ACTION_INFECT_CURE = 0,
 	ACTION_MAKE_NEMESIS,
 	ACTION_MAKE_SURVIVOR,
-	ACTION_MAKE_GHOST,
 	ACTION_RESPAWN_PLAYER,
 	ACTION_START_GAME_MODE
 }
@@ -92,8 +85,6 @@ public plugin_precache()
 		amx_save_setting_string(ZP_SETTINGS_FILE, "Access Flags", "MAKE NEMESIS", g_access_make_nemesis)
 	if (!amx_load_setting_string(ZP_SETTINGS_FILE, "Access Flags", "MAKE SURVIVOR", g_access_make_survivor, charsmax(g_access_make_survivor)))
 		amx_save_setting_string(ZP_SETTINGS_FILE, "Access Flags", "MAKE SURVIVOR", g_access_make_survivor)
-	if (!amx_load_setting_string(ZP_GHOST_SETTINGS_FILE, "Access Flags", "MAKE GHOST", g_access_make_ghost, charsmax(g_access_make_ghost)))
-		amx_save_setting_string(ZP_GHOST_SETTINGS_FILE, "Access Flags", "MAKE GHOST", g_access_make_ghost)
 	if (!amx_load_setting_string(ZP_SETTINGS_FILE, "Access Flags", "RESPAWN PLAYERS", g_access_respawn_players, charsmax(g_access_respawn_players)))
 		amx_save_setting_string(ZP_SETTINGS_FILE, "Access Flags", "RESPAWN PLAYERS", g_access_respawn_players)
 	if (!amx_load_setting_string(ZP_SETTINGS_FILE, "Access Flags", "START GAME MODE", g_access_start_game_mode, charsmax(g_access_start_game_mode)))
@@ -110,7 +101,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -176,20 +167,13 @@ show_menu_admin(id)
 	else
 		len += formatex(menu[len], charsmax(menu) - len, "\d3. %L^n", id, "MENU_ADMIN3")
 	
-	// 4. Ghost command
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && (userflags & read_flags(g_access_make_ghost)))
-		len += formatex(menu[len], charsmax(menu) - len, "\r4.\w %L^n", id, "GHOST_MENU_ADMIN")
-	else
-		len += formatex(menu[len], charsmax(menu) - len, "\d4. %L^n", id, "GHOST_MENU_ADMIN")
-	
-	
-	// 5. Respawn command
+	// 4. Respawn command
 	if (userflags & read_flags(g_access_respawn_players))
 		len += formatex(menu[len], charsmax(menu) - len, "\r5.\w %L^n", id, "MENU_ADMIN4")
 	else
 		len += formatex(menu[len], charsmax(menu) - len, "\d5. %L^n", id, "MENU_ADMIN4")
 	
-	// 6. Start Game Mode command
+	// 5. Start Game Mode command
 	if (userflags & read_flags(g_access_start_game_mode))
 		len += formatex(menu[len], charsmax(menu) - len, "\r6.\w %L^n", id, "MENU_ADMIN_START_GAME_MODE")
 	else
@@ -215,7 +199,6 @@ show_menu_player_list(id)
 		case ACTION_INFECT_CURE: formatex(menu, charsmax(menu), "%L\r", id, "MENU_ADMIN1")
 		case ACTION_MAKE_NEMESIS: formatex(menu, charsmax(menu), "%L\r", id, "MENU_ADMIN2")
 		case ACTION_MAKE_SURVIVOR: formatex(menu, charsmax(menu), "%L\r", id, "MENU_ADMIN3")
-		case ACTION_MAKE_GHOST: formatex(menu, charsmax(menu), "%L\r", id, "GHOST_MENU_ADMIN")
 		case ACTION_RESPAWN_PLAYER: formatex(menu, charsmax(menu), "%L\r", id, "MENU_ADMIN4")
 	}
 	menuid = menu_create(menu, "menu_player_list")
@@ -273,18 +256,6 @@ show_menu_player_list(id)
 				}
 				else
 					formatex(menu, charsmax(menu), "\d%s [%L]", player_name, id, zp_core_is_zombie(player) ? (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(player)) ? "CLASS_NEMESIS" : "CLASS_ZOMBIE" : (LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(player)) ? "CLASS_SURVIVOR" : "CLASS_HUMAN")
-			}
-			case ACTION_MAKE_GHOST: // Ghost command
-			{
-				if (LibraryExists(LIBRARY_GHOST, LibType_Library) && (userflags & read_flags(g_access_make_ghost)) && is_user_alive(player) && !zp_class_ghost_get(player))
-				{
-					if (zp_core_is_zombie(player))
-						formatex(menu, charsmax(menu), "%s \r[%L]", player_name, id, (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(player)) ? "CLASS_GHOST" : "CLASS_ZOMBIE")
-					else
-						formatex(menu, charsmax(menu), "%s \y[%L]", player_name, id, (LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(player)) ? "CLASS_SURVIVOR" : "CLASS_HUMAN")
-				}
-				else
-					formatex(menu, charsmax(menu), "\d%s [%L]", player_name, id, zp_core_is_zombie(player) ? (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(player)) ? "CLASS_GHOST" : "CLASS_ZOMBIE" : (LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(player)) ? "CLASS_SURVIVOR" : "CLASS_HUMAN")
 			}
 			case ACTION_RESPAWN_PLAYER: // Respawn command
 			{
@@ -418,20 +389,6 @@ public menu_admin(id, key)
 				show_menu_admin(id)
 			}
 		}
-		case ACTION_MAKE_GHOST: // Survivor command
-		{
-			if (LibraryExists(LIBRARY_GHOST, LibType_Library) && (userflags & read_flags(g_access_make_ghost)))
-			{
-				// Show player list for admin to pick a target
-				PL_ACTION = ACTION_MAKE_GHOST
-				show_menu_player_list(id)
-			}
-			else
-			{
-				zp_colored_print(id, "%L", id, "CMD_NOT_ACCESS")
-				show_menu_admin(id)
-			}
-		}
 		case ACTION_RESPAWN_PLAYER: // Respawn command
 		{
 			if (userflags & read_flags(g_access_respawn_players))
@@ -520,13 +477,6 @@ public menu_player_list(id, menuid, item)
 			{
 				if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && (userflags & read_flags(g_access_make_survivor)) && is_user_alive(player) && !zp_class_survivor_get(player))
 					zp_admin_commands_survivor(id, player)
-				else
-					zp_colored_print(id, "%L", id, "CMD_NOT")
-			}
-			case ACTION_MAKE_GHOST: // Ghost command
-			{
-				if (LibraryExists(LIBRARY_GHOST, LibType_Library) && (userflags & read_flags(g_access_make_ghost)) && is_user_alive(player) && !zp_class_ghost_get(player))
-					zp_admin_commands_ghost(id, player)
 				else
 					zp_colored_print(id, "%L", id, "CMD_NOT")
 			}

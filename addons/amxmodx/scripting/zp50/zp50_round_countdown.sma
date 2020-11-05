@@ -1,7 +1,7 @@
 /*================================================================================
 	
 	-----------------------------------
-	-*- [ZP] Ghost: Round: Countdown -*-
+	-*- [ZP] Zaphie: Round: Countdown -*-
 	-----------------------------------
 	
 	This plugin is part of Zombie Plague Mod and is distributed under the
@@ -41,11 +41,11 @@ new Array:g_sound_files;
 new Array:g_sound_infos;
 
 // 配置文件
-new const ZP_SETTINGS_FILE[] = "zombieplague_mod_ghost.ini";
+new const ZP_SETTINGS_FILE[] = "zombieplague_zaphie.ini";
 
 // 声音文件
 new const sound_start_default[][] = {
-	"zombie_plague/ghost/roundstart/other_roundstart.mp3"
+	"zombie_plague/zaphie/roundstart/other_roundstart.mp3"
 };
 
 new const message_phrase_en_default[] = "Biochemical virus is looking for host in %d seconds."
@@ -53,16 +53,16 @@ new const message_phrase_cn_default[] = "生化病毒正在寻找宿主, 剩余 
 
 new zp_countdown_default[COUNTDOWN_MAX][] = 
 { 
-	"zombie_plague/ghost/other/10.wav",
-	"zombie_plague/ghost/other/9.wav",
-	"zombie_plague/ghost/other/8.wav",
-	"zombie_plague/ghost/other/7.wav",
-	"zombie_plague/ghost/other/6.wav",
-	"zombie_plague/ghost/other/5.wav",
-	"zombie_plague/ghost/other/4.wav",
-	"zombie_plague/ghost/other/3.wav",
-	"zombie_plague/ghost/other/2.wav",
-	"zombie_plague/ghost/other/1.wav"
+	"zombie_plague/zaphie/other/10.wav",
+	"zombie_plague/zaphie/other/9.wav",
+	"zombie_plague/zaphie/other/8.wav",
+	"zombie_plague/zaphie/other/7.wav",
+	"zombie_plague/zaphie/other/6.wav",
+	"zombie_plague/zaphie/other/5.wav",
+	"zombie_plague/zaphie/other/4.wav",
+	"zombie_plague/zaphie/other/3.wav",
+	"zombie_plague/zaphie/other/2.wav",
+	"zombie_plague/zaphie/other/1.wav"
 };
 
 public plugin_init()

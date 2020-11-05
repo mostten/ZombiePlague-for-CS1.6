@@ -20,8 +20,6 @@
 #include <zp50_class_zombie>
 #define LIBRARY_NEMESIS "zp50_class_nemesis"
 #include <zp50_class_nemesis>
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
 
 // Settings file
 new const ZP_SETTINGS_FILE[] = "zombieplague.ini"
@@ -87,7 +85,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_GHOST) || equal(module, LIBRARY_ZOMBIE))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_ZOMBIE))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -104,13 +102,13 @@ public native_filter(const name[], index, trap)
 public fw_PlayerKilled(victim, attacker, shouldgib)
 {
 	// Remove bleeding task
-	remove_task(victim+TASK_BLOOD)
+	remove_user_beeding(victim);
 }
 
 public client_disconnected(id)
 {
 	// Remove bleeding task
-	remove_task(id+TASK_BLOOD)
+	remove_user_beeding(id);
 }
 
 public message_setfov(msg_id, msg_dest, msg_entity)
@@ -132,41 +130,21 @@ public zp_fw_core_infect_post(id, attacker)
 	}
 	
 	// Remove previous tasks
-	remove_task(id+TASK_BLOOD)
+	remove_user_beeding(id);
 	
-	// Nemesis Class loaded?
-	if (!LibraryExists(LIBRARY_NEMESIS, LibType_Library) || !zp_class_nemesis_get(id))
-	{
-		// Set silent footsteps?
-		if (get_pcvar_num(cvar_zombie_silent))
-			set_user_footsteps(id, 1)
+	// Set silent footsteps?
+	if (get_pcvar_num(cvar_zombie_silent))
+		set_user_footsteps(id, 1)
 		
-		// Zombie bleeding?
-		if (get_pcvar_num(cvar_zombie_bleeding))
-		{
-			new bool:blood;
-			if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(id))
-			{
-				new ghost = zp_class_ghost_get_current(id);
-				blood = (ghost != ZP_INVALID_GHOST_CLASS && zp_class_ghost_get_blood(ghost));
-			}
-			else if (LibraryExists(LIBRARY_ZOMBIE, LibType_Library))
-			{
-				new zombie = zp_class_zombie_get_current(id);
-				blood = (zombie != ZP_INVALID_ZOMBIE_CLASS && zp_class_zombie_get_blood(zombie));
-			}
-			else
-				blood = true;
-			
-			if(blood)
-				set_task(0.7, "zombie_bleeding", id+TASK_BLOOD, _, _, "b");
-		}
+	// Zombie bleeding?
+	if (get_pcvar_num(cvar_zombie_bleeding))
+	{
+		if(is_user_bleeding_enable(id)){set_user_bleeding(id);}
 	}
 	else
 	{
 		// Restore normal footsteps?
-		if (get_pcvar_num(cvar_zombie_silent))
-			set_user_footsteps(id, 0)
+		if (get_pcvar_num(cvar_zombie_silent)){set_user_footsteps(id, 0);}
 	}
 }
 
@@ -175,51 +153,79 @@ public zp_fw_core_cure_post(id, attacker)
 	// Restore FOV?
 	if (get_pcvar_num(cvar_zombie_fov) != CS_DEFAULT_FOV && get_pcvar_num(cvar_zombie_fov) != 0)
 	{
-		message_begin(MSG_ONE, g_MsgSetFOV, _, id)
-		write_byte(CS_DEFAULT_FOV) // angle
-		message_end()
+		message_begin(MSG_ONE, g_MsgSetFOV, _, id);
+		write_byte(CS_DEFAULT_FOV); // angle
+		message_end();
 	}
 	
 	// Restore normal footsteps?
 	if (get_pcvar_num(cvar_zombie_silent))
-		set_user_footsteps(id, 0)
+		set_user_footsteps(id, 0);
 	
 	// Remove bleeding task
-	remove_task(id+TASK_BLOOD)
+	remove_user_beeding(id);
 }
 
 // Make zombies leave footsteps and bloodstains on the floor
 public zombie_bleeding(taskid)
 {
+	if(!is_user_bleeding_enable(ID_BLOOD))
+		return;
+	
 	// Only bleed when moving on ground
-	if (!(pev(ID_BLOOD, pev_flags) & FL_ONGROUND) || fm_get_speed(ID_BLOOD) < 80)
+	if (!(pev(ID_BLOOD, pev_flags) & FL_ONGROUND) || get_entity_speed(ID_BLOOD) < 80)
 		return;
 	
 	// Get user origin
-	static Float:originF[3]
-	pev(ID_BLOOD, pev_origin, originF)
+	static Float:originF[3];
+	pev(ID_BLOOD, pev_origin, originF);
 	
 	// If ducking set a little lower
 	if (pev(ID_BLOOD, pev_bInDuck))
-		originF[2] -= 18.0
+		originF[2] -= 18.0;
 	else
-		originF[2] -= 36.0
+		originF[2] -= 36.0;
 	
 	// Send the decal message
-	message_begin(MSG_BROADCAST, SVC_TEMPENTITY)
-	write_byte(TE_WORLDDECAL) // TE id
-	engfunc(EngFunc_WriteCoord, originF[0]) // x
-	engfunc(EngFunc_WriteCoord, originF[1]) // y
-	engfunc(EngFunc_WriteCoord, originF[2]) // z
-	write_byte(ArrayGetCell(g_bleeding_decals, random_num(0, ArraySize(g_bleeding_decals) - 1)) + (g_IsModCZ * 12)) // decal number (offsets +12 for CZ)
-	message_end()
+	message_begin(MSG_BROADCAST, SVC_TEMPENTITY);
+	write_byte(TE_WORLDDECAL); // TE id
+	engfunc(EngFunc_WriteCoord, originF[0]); // x
+	engfunc(EngFunc_WriteCoord, originF[1]); // y
+	engfunc(EngFunc_WriteCoord, originF[2]); // z
+	write_byte(ArrayGetCell(g_bleeding_decals, random_num(0, ArraySize(g_bleeding_decals) - 1)) + (g_IsModCZ * 12)); // decal number (offsets +12 for CZ)
+	message_end();
 }
 
 // Get entity's speed (from fakemeta_util)
-stock fm_get_speed(entity)
+get_entity_speed(entity)
 {
 	static Float:velocity[3]
 	pev(entity, pev_velocity, velocity)
 	
 	return floatround(vector_length(velocity));
+}
+
+set_user_bleeding(id)
+{
+	remove_user_beeding(id);
+	set_task(0.7, "zombie_bleeding", id+TASK_BLOOD, _, _, "b");
+}
+
+remove_user_beeding(id)
+{
+	// Remove previous tasks
+	if(task_exists(id+TASK_BLOOD, 0)){remove_task(id+TASK_BLOOD);}
+}
+
+bool:is_user_bleeding_enable(id)
+{
+	new bool:blood = false;
+	if (LibraryExists(LIBRARY_ZOMBIE, LibType_Library))
+	{
+		new zombie = zp_class_zombie_get_current(id);
+		blood = (zombie != ZP_INVALID_ZOMBIE_CLASS && zp_class_zombie_get_blood(zombie));
+	}
+	else{blood = true;}
+	
+	return blood;
 }

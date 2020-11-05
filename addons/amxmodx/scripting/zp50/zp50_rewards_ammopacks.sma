@@ -17,8 +17,6 @@
 #include <zp50_class_nemesis>
 #define LIBRARY_SURVIVOR "zp50_class_survivor"
 #include <zp50_class_survivor>
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
 #include <zp50_ammopacks>
 
 #define MAXPLAYERS 32
@@ -32,7 +30,7 @@ new cvar_ammop_winner, cvar_ammop_loser
 new cvar_ammop_damage, cvar_ammop_zombie_damaged_hp, cvar_ammop_human_damaged_hp
 new cvar_ammop_zombie_killed, cvar_ammop_human_killed
 new cvar_ammop_human_infected
-new cvar_ammop_nemesis_ignore, cvar_ammop_survivor_ignore, cvar_ammop_ghost_ignore
+new cvar_ammop_nemesis_ignore, cvar_ammop_survivor_ignore
 
 public plugin_init()
 {
@@ -56,10 +54,6 @@ public plugin_init()
 	if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library))
 		cvar_ammop_survivor_ignore = register_cvar("zp_ammop_survivor_ignore", "0")
 	
-	// Ghost Class loaded?
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library))
-		cvar_ammop_ghost_ignore = register_cvar("zp_ammop_ghost_ignore", "0")
-	
 	RegisterHam(Ham_TakeDamage, "player", "fw_TakeDamage_Post", 1)
 	RegisterHamBots(Ham_TakeDamage, "fw_TakeDamage_Post", 1)
 	RegisterHam(Ham_Killed, "player", "fw_PlayerKilled_Post", 1)
@@ -75,7 +69,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -100,10 +94,6 @@ public fw_TakeDamage_Post(victim, inflictor, attacker, Float:damage, damage_type
 {
 	// Non-player damage or self damage
 	if (victim == attacker || !is_user_alive(attacker))
-		return;
-	
-	// Ignore ammo pack rewards for Ghost?
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(attacker) && get_pcvar_num(cvar_ammop_ghost_ignore))
 		return;
 	
 	// Ignore ammo pack rewards for Nemesis?
@@ -157,10 +147,6 @@ public fw_PlayerKilled_Post(victim, attacker, shouldgib)
 {
 	// Non-player kill or self kill
 	if (victim == attacker || !is_user_connected(attacker))
-		return;
-	
-	// Ignore ammo pack rewards for Ghost?
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(attacker) && get_pcvar_num(cvar_ammop_ghost_ignore))
 		return;
 	
 	// Ignore ammo pack rewards for Nemesis?

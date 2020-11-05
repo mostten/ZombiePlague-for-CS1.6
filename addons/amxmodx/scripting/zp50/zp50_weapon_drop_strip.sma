@@ -10,6 +10,7 @@
 ================================================================================*/
 
 #include <amxmodx>
+#include <engine>
 #include <cstrike>
 #include <fakemeta>
 #include <hamsandwich>
@@ -114,6 +115,9 @@ public fw_SetModel(entity, const model[])
 	// Remove weapons?
 	if (get_pcvar_float(cvar_remove_dropped_weapons) > 0.0)
 	{
+		if(!is_valid_ent(entity))
+			return;
+		
 		// Get entity's classname
 		new classname[10]
 		pev(entity, pev_classname, classname, charsmax(classname))

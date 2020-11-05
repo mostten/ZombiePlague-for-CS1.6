@@ -12,20 +12,18 @@
 #include <amxmodx>
 #include <amx_settings_api>
 #include <zp50_gamemodes>
-
-//Ghost模式扩展
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
+#define LIBRARY_ZAPHIE "zp50_class_zaphie"
+#include <zp50_class_zaphie>
 
 // Settings file
 new const ZP_SETTINGS_FILE[] = "zombieplague.ini"
 
-// Settings file for ghost
-new const ZP_GHOST_SETTINGS_FILE[] = "zombieplague_mod_ghost.ini"
+// Settings file for zaphie
+new const ZP_ZAPHIE_SETTINGS_FILE[] = "zombieplague_zaphie.ini"
 
 // Default sounds
-new const sound_ghost_win_ghosts[][] = { "zombie_plague/ghost/result/lose.wav" }
-new const sound_ghost_win_humans[][] = { "zombie_plague/ghost/result/win.wav" }
+new const sound_zaphie_win_zaphies[][] = { "zombie_plague/zaphie/result/lose.wav" }
+new const sound_zaphie_win_humans[][] = { "zombie_plague/zaphie/result/win.wav" }
 new const sound_win_zombies[][] = { "ambience/the_horror1.wav" , "ambience/the_horror3.wav" , "ambience/the_horror4.wav" }
 new const sound_win_humans[][] = { "zombie_plague/win_humans1.wav" , "zombie_plague/win_humans2.wav" }
 new const sound_win_no_one[][] = { "ambience/3dmstart.wav" }
@@ -37,8 +35,8 @@ new const sound_win_no_one[][] = { "ambience/3dmstart.wav" }
 #define SOUND_MAX_LENGTH 64
 
 // Custom sounds
-new Array:g_sound_ghost_win_ghosts
-new Array:g_sound_ghost_win_humans
+new Array:g_sound_zaphie_win_zaphies
+new Array:g_sound_zaphie_win_humans
 new Array:g_sound_win_zombies
 new Array:g_sound_win_humans
 new Array:g_sound_win_no_one
@@ -69,7 +67,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_ZAPHIE))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -85,36 +83,36 @@ public native_filter(const name[], index, trap)
 public plugin_precache()
 {
 	// Initialize arrays
-	g_sound_ghost_win_ghosts = ArrayCreate(SOUND_MAX_LENGTH, 1)
-	g_sound_ghost_win_humans = ArrayCreate(SOUND_MAX_LENGTH, 1)
+	g_sound_zaphie_win_zaphies = ArrayCreate(SOUND_MAX_LENGTH, 1)
+	g_sound_zaphie_win_humans = ArrayCreate(SOUND_MAX_LENGTH, 1)
 	g_sound_win_zombies = ArrayCreate(SOUND_MAX_LENGTH, 1)
 	g_sound_win_humans = ArrayCreate(SOUND_MAX_LENGTH, 1)
 	g_sound_win_no_one = ArrayCreate(SOUND_MAX_LENGTH, 1)
 	
 	// Load from external file
-	amx_load_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST WIN GHOSTS", g_sound_ghost_win_ghosts)
-	amx_load_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST WIN HUMANS", g_sound_ghost_win_humans)
+	amx_load_setting_string_arr(ZP_ZAPHIE_SETTINGS_FILE, "Sounds", "ZAPHIE WIN ZAPHIEs", g_sound_zaphie_win_zaphies)
+	amx_load_setting_string_arr(ZP_ZAPHIE_SETTINGS_FILE, "Sounds", "ZAPHIE WIN HUMANS", g_sound_zaphie_win_humans)
 	amx_load_setting_string_arr(ZP_SETTINGS_FILE, "Sounds", "WIN ZOMBIES", g_sound_win_zombies)
 	amx_load_setting_string_arr(ZP_SETTINGS_FILE, "Sounds", "WIN HUMANS", g_sound_win_humans)
 	amx_load_setting_string_arr(ZP_SETTINGS_FILE, "Sounds", "WIN NO ONE", g_sound_win_no_one)
 	
 	// If we couldn't load custom sounds from file, use and save default ones
 	new index
-	if (ArraySize(g_sound_ghost_win_ghosts) == 0)
+	if (ArraySize(g_sound_zaphie_win_zaphies) == 0)
 	{
-		for (index = 0; index < sizeof sound_ghost_win_ghosts; index++)
-			ArrayPushString(g_sound_ghost_win_ghosts, sound_ghost_win_ghosts[index])
+		for (index = 0; index < sizeof sound_zaphie_win_zaphies; index++)
+			ArrayPushString(g_sound_zaphie_win_zaphies, sound_zaphie_win_zaphies[index])
 		
 		// Save to external file
-		amx_save_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST WIN GHOSTS", g_sound_ghost_win_ghosts)
+		amx_save_setting_string_arr(ZP_ZAPHIE_SETTINGS_FILE, "Sounds", "ZAPHIE WIN ZAPHIEs", g_sound_zaphie_win_zaphies)
 	}
-	if (ArraySize(g_sound_ghost_win_humans) == 0)
+	if (ArraySize(g_sound_zaphie_win_humans) == 0)
 	{
-		for (index = 0; index < sizeof sound_ghost_win_humans; index++)
-			ArrayPushString(g_sound_ghost_win_humans, sound_ghost_win_humans[index])
+		for (index = 0; index < sizeof sound_zaphie_win_humans; index++)
+			ArrayPushString(g_sound_zaphie_win_humans, sound_zaphie_win_humans[index])
 		
 		// Save to external file
-		amx_save_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST WIN HUMANS", g_sound_ghost_win_humans)
+		amx_save_setting_string_arr(ZP_ZAPHIE_SETTINGS_FILE, "Sounds", "ZAPHIE WIN HUMANS", g_sound_zaphie_win_humans)
 	}
 	if (ArraySize(g_sound_win_zombies) == 0)
 	{
@@ -143,9 +141,9 @@ public plugin_precache()
 	
 	// Precache sounds
 	new sound[SOUND_MAX_LENGTH]
-	for (index = 0; index < ArraySize(g_sound_ghost_win_ghosts); index++)
+	for (index = 0; index < ArraySize(g_sound_zaphie_win_zaphies); index++)
 	{
-		ArrayGetString(g_sound_ghost_win_ghosts, index, sound, charsmax(sound))
+		ArrayGetString(g_sound_zaphie_win_zaphies, index, sound, charsmax(sound))
 		if (equal(sound[strlen(sound)-4], ".mp3"))
 		{
 			format(sound, charsmax(sound), "sound/%s", sound)
@@ -154,9 +152,9 @@ public plugin_precache()
 		else
 			precache_sound(sound)
 	}
-	for (index = 0; index < ArraySize(g_sound_ghost_win_humans); index++)
+	for (index = 0; index < ArraySize(g_sound_zaphie_win_humans); index++)
 	{
-		ArrayGetString(g_sound_ghost_win_humans, index, sound, charsmax(sound))
+		ArrayGetString(g_sound_zaphie_win_humans, index, sound, charsmax(sound))
 		if (equal(sound[strlen(sound)-4], ".mp3"))
 		{
 			format(sound, charsmax(sound), "sound/%s", sound)
@@ -204,21 +202,21 @@ public zp_fw_gamemodes_end(game_mode_id)
 {
 	// Determine round winner, show HUD notice
 	new sound[SOUND_MAX_LENGTH]
-	new isGhostMod = (LibraryExists(LIBRARY_GHOST, LibType_Library) && game_mode_id == zp_gamemodes_get_id("Ghost Mode"))
+	new isZaphieMod = (LibraryExists(LIBRARY_ZAPHIE, LibType_Library) && game_mode_id == zp_gamemodes_get_id("Zaphie Mode"))
 	if (!zp_core_get_zombie_count())
 	{
 		// Human team wins
 		if (get_pcvar_num(cvar_winner_show_hud))
 		{
 			set_hudmessage(0, 0, 200, HUD_EVENT_X, HUD_EVENT_Y, 0, 0.0, 3.0, 2.0, 1.0, -1)
-			ShowSyncHudMsg(0, g_HudSync, "%L", LANG_PLAYER, isGhostMod?"GHOST_WIN_HUMAN":"WIN_HUMAN")
+			ShowSyncHudMsg(0, g_HudSync, "%L", LANG_PLAYER, isZaphieMod?"ZAPHIE_WIN_HUMAN":"WIN_HUMAN")
 		}
 		
 		if (get_pcvar_num(cvar_winner_sounds))
 		{
-			if(isGhostMod)
+			if(isZaphieMod)
 			{
-				ArrayGetString(g_sound_ghost_win_humans, random_num(0, ArraySize(g_sound_ghost_win_humans) - 1), sound, charsmax(sound))
+				ArrayGetString(g_sound_zaphie_win_humans, random_num(0, ArraySize(g_sound_zaphie_win_humans) - 1), sound, charsmax(sound))
 			}
 			else
 			{
@@ -235,14 +233,14 @@ public zp_fw_gamemodes_end(game_mode_id)
 		if (get_pcvar_num(cvar_winner_show_hud))
 		{
 			set_hudmessage(200, 0, 0, HUD_EVENT_X, HUD_EVENT_Y, 0, 0.0, 3.0, 2.0, 1.0, -1)
-			ShowSyncHudMsg(0, g_HudSync, "%L", LANG_PLAYER, isGhostMod?"GHOST_WIN_GHOST":"WIN_ZOMBIE")
+			ShowSyncHudMsg(0, g_HudSync, "%L", LANG_PLAYER, isZaphieMod?"ZAPHIE_WIN_ZAPHIE":"WIN_ZOMBIE")
 		}
 		
 		if (get_pcvar_num(cvar_winner_sounds))
 		{
-			if(isGhostMod)
+			if(isZaphieMod)
 			{
-				ArrayGetString(g_sound_ghost_win_ghosts, random_num(0, ArraySize(g_sound_ghost_win_ghosts) - 1), sound, charsmax(sound))
+				ArrayGetString(g_sound_zaphie_win_zaphies, random_num(0, ArraySize(g_sound_zaphie_win_zaphies) - 1), sound, charsmax(sound))
 			}
 			else
 			{

@@ -37,6 +37,7 @@ new Array:g_sound_multi
 
 new g_MaxPlayers
 new g_HudSync
+new g_MultipleInfectionMode
 
 new cvar_multi_chance, cvar_multi_min_players, cvar_multi_min_zombies
 new cvar_multi_ratio, cvar_multi_show_hud, cvar_multi_sounds
@@ -46,7 +47,7 @@ public plugin_precache()
 {
 	// Register game mode at precache (plugin gets paused after this)
 	register_plugin("[ZP] Game Mode: Multiple Infection", ZP_VERSION_STRING, "ZP Dev Team")
-	zp_gamemodes_register("Multiple Infection Mode")
+	g_MultipleInfectionMode = zp_gamemodes_register("Multiple Infection Mode")
 	
 	// Create the HUD Sync Objects
 	g_HudSync = CreateHudSyncObj()
@@ -97,14 +98,16 @@ public plugin_precache()
 // Deathmatch module's player respawn forward
 public zp_fw_deathmatch_respawn_pre(id)
 {
-	// Respawning allowed?
-	if (!get_pcvar_num(cvar_multi_allow_respawn))
-		return PLUGIN_HANDLED;
-	
-	// Respawn if only the last human is left?
-	if (!get_pcvar_num(cvar_respawn_after_last_human) && zp_core_get_human_count() == 1)
-		return PLUGIN_HANDLED;
-	
+	if(is_multiple_infection_mod(zp_gamemodes_get_current()))
+	{
+		// Respawning allowed?
+		if (!get_pcvar_num(cvar_multi_allow_respawn))
+			return PLUGIN_HANDLED;
+		
+		// Respawn if only the last human is left?
+		if (!get_pcvar_num(cvar_respawn_after_last_human) && zp_core_get_human_count() == 1)
+			return PLUGIN_HANDLED;
+	}
 	return PLUGIN_CONTINUE;
 }
 
@@ -138,8 +141,11 @@ public zp_fw_gamemodes_choose_pre(game_mode_id, skipchecks)
 	return PLUGIN_CONTINUE;
 }
 
-public zp_fw_gamemodes_start()
+public zp_fw_gamemodes_start(game_mode_id)
 {
+	if(!is_multiple_infection_mod(game_mode_id))
+		return;
+	
 	// Allow infection for this game mode
 	zp_gamemodes_set_allow_infect()
 	
@@ -227,4 +233,9 @@ GetRandomAlive(target_index)
 	}
 	
 	return -1;
+}
+
+bool:is_multiple_infection_mod(game_mode_id)
+{
+	return g_MultipleInfectionMode != ZP_INVALID_GAME_MODE && game_mode_id == g_MultipleInfectionMode;
 }

@@ -32,9 +32,17 @@ new Array:g_sound_survivor
 #define HUD_EVENT_G 20
 #define HUD_EVENT_B 255
 
+enum _:TOTAL_FORWARDS
+{
+	FW_ROUND_STARTED = 0
+};
+new g_Forwards[TOTAL_FORWARDS];
+new g_ForwardResult;
+
 new g_MaxPlayers
 new g_HudSync
 new g_TargetPlayer
+new g_SurvivorMode
 
 new cvar_survivor_chance, cvar_survivor_min_players
 new cvar_survivor_show_hud, cvar_survivor_sounds
@@ -44,7 +52,7 @@ public plugin_precache()
 {
 	// Register game mode at precache (plugin gets paused after this)
 	register_plugin("[ZP] Game Mode: Survivor", ZP_VERSION_STRING, "ZP Dev Team")
-	zp_gamemodes_register("Survivor Mode")
+	g_SurvivorMode = zp_gamemodes_register("Survivor Mode")
 	
 	// Create the HUD Sync Objects
 	g_HudSync = CreateHudSyncObj()
@@ -87,22 +95,29 @@ public plugin_precache()
 		else
 			precache_sound(sound)
 	}
+	
+	g_Forwards[FW_ROUND_STARTED] = CreateMultiForward("zp_fw_survivor_started", ET_IGNORE, FP_CELL);
 }
 
 // Deathmatch module's player respawn forward
 public zp_fw_deathmatch_respawn_pre(id)
 {
-	// Respawning allowed?
-	if (!get_pcvar_num(cvar_survivor_allow_respawn))
-		return PLUGIN_HANDLED;
-	
+	if(is_survivor_mod(zp_gamemodes_get_current()))
+	{
+		// Respawning allowed?
+		if (!get_pcvar_num(cvar_survivor_allow_respawn))
+			return PLUGIN_HANDLED;
+	}
 	return PLUGIN_CONTINUE;
 }
 
 public zp_fw_core_spawn_post(id)
 {
-	// Always respawn as zombie on survivor rounds
-	zp_core_respawn_as_zombie(id, true)
+	if(is_survivor_mod(zp_gamemodes_get_current()))
+	{
+		// Always respawn as zombie on survivor rounds
+		zp_core_respawn_as_zombie(id, true)
+	}
 }
 
 public zp_fw_gamemodes_choose_pre(game_mode_id, skipchecks)
@@ -128,21 +143,28 @@ public zp_fw_gamemodes_choose_post(game_mode_id, target_player)
 	g_TargetPlayer = (target_player == RANDOM_TARGET_PLAYER) ? GetRandomAlive(random_num(1, GetAliveCount())) : target_player
 }
 
-public zp_fw_gamemodes_start()
+public zp_fw_gamemodes_start(game_mode_id)
 {
-	// Turn player into survivor
-	zp_class_survivor_set(g_TargetPlayer)
+	if(!is_survivor_mod(game_mode_id))
+		return;
 	
 	// Turn the remaining players into zombies
 	new id
 	for (id = 1; id <= g_MaxPlayers; id++)
 	{
+		if(id == g_TargetPlayer)
+		{
+			// Turn player into survivor
+			zp_class_survivor_set(id)
+			continue;
+		}
+		
 		// Not alive
 		if (!is_user_alive(id))
 			continue;
 		
-		// Survivor or already a zombie
-		if (zp_class_survivor_get(id) || zp_core_is_zombie(id))
+		// Already a zombie
+		if (zp_core_is_zombie(id))
 			continue;
 		
 		zp_core_infect(id)
@@ -164,6 +186,16 @@ public zp_fw_gamemodes_start()
 		set_hudmessage(HUD_EVENT_R, HUD_EVENT_G, HUD_EVENT_B, HUD_EVENT_X, HUD_EVENT_Y, 1, 0.0, 5.0, 1.0, 1.0, -1)
 		ShowSyncHudMsg(0, g_HudSync, "%L", LANG_PLAYER, "NOTICE_SURVIVOR", name)
 	}
+	
+	ExecuteForward(g_Forwards[FW_ROUND_STARTED], g_ForwardResult, g_TargetPlayer);
+}
+
+public zp_fw_class_human_menu_show_pre(id)
+{
+	if(is_survivor_mod(zp_gamemodes_get_current()))
+		return PLUGIN_HANDLED;
+	
+	return PLUGIN_CONTINUE;
 }
 
 // Plays a sound on clients
@@ -204,4 +236,9 @@ GetRandomAlive(target_index)
 	}
 	
 	return -1;
+}
+
+bool:is_survivor_mod(game_mode_id)
+{
+	return g_SurvivorMode != ZP_INVALID_GAME_MODE && game_mode_id == g_SurvivorMode;
 }

@@ -37,6 +37,7 @@ new Array:g_sound_armageddon
 
 new g_MaxPlayers
 new g_HudSync
+new g_ArmageddonMode
 
 new cvar_armageddon_chance, cvar_armageddon_min_players
 new cvar_armageddon_ratio
@@ -48,7 +49,7 @@ public plugin_precache()
 {
 	// Register game mode at precache (plugin gets paused after this)
 	register_plugin("[ZP] Game Mode: Armageddon", ZP_VERSION_STRING, "ZP Dev Team")
-	zp_gamemodes_register("Armageddon Mode")
+	g_ArmageddonMode = zp_gamemodes_register("Armageddon Mode")
 	
 	// Create the HUD Sync Objects
 	g_HudSync = CreateHudSyncObj()
@@ -100,7 +101,8 @@ public plugin_precache()
 public zp_fw_deathmatch_respawn_pre(id)
 {
 	// Respawning allowed?
-	if (!get_pcvar_num(cvar_armageddon_allow_respawn))
+	if (is_armageddon_mod(zp_gamemodes_get_current())
+		&& !get_pcvar_num(cvar_armageddon_allow_respawn))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -123,8 +125,11 @@ public zp_fw_gamemodes_choose_pre(game_mode_id, skipchecks)
 	return PLUGIN_CONTINUE;
 }
 
-public zp_fw_gamemodes_start()
+public zp_fw_gamemodes_start(game_mode_id)
 {
+	if(!is_armageddon_mod(game_mode_id))
+		return;
+	
 	// Calculate player counts
 	new id, alive_count = GetAliveCount()
 	new survivor_count = floatround(alive_count * get_pcvar_float(cvar_armageddon_ratio), floatround_ceil)
@@ -222,4 +227,9 @@ GetRandomAlive(target_index)
 	}
 	
 	return -1;
+}
+
+bool:is_armageddon_mod(game_mode_id)
+{
+	return g_ArmageddonMode != ZP_INVALID_GAME_MODE && game_mode_id == g_ArmageddonMode;
 }

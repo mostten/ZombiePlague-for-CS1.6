@@ -22,10 +22,6 @@
 #define LIBRARY_AMMOPACKS "zp50_ammopacks"
 #include <zp50_ammopacks>
 
-//扩展ghost模式
-#include <zp50_class_ghost>
-#define LIBRARY_GHOST "zp50_class_ghost"
-
 const Float:HUD_SPECT_X = 0.6
 const Float:HUD_SPECT_Y = 0.8
 const Float:HUD_STATS_X = 0.02
@@ -64,7 +60,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_AMMOPACKS) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_AMMOPACKS))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -121,12 +117,6 @@ public ShowHUD(taskid)
 		if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(player))
 		{
 			formatex(class_name, charsmax(class_name), "%L", ID_SHOWHUD, "CLASS_NEMESIS")
-		}
-		else if(LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(player))
-		{
-			zp_class_ghost_get_name(zp_class_ghost_get_current(player), class_name, charsmax(class_name))
-			formatex(transkey, charsmax(transkey), "GHOSTNAME %s", class_name)
-			if (GetLangTransKey(transkey) != TransKey_Bad) formatex(class_name, charsmax(class_name), "%L", ID_SHOWHUD, transkey)
 		}
 		else
 		{

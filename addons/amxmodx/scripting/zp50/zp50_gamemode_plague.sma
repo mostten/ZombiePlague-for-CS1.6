@@ -35,8 +35,13 @@ new Array:g_sound_plague
 #define HUD_EVENT_G 50
 #define HUD_EVENT_B 200
 
+#define flag_get(%1,%2) (%1 & (1 << (%2 & 31)))
+#define flag_get_boolean(%1,%2) (flag_get(%1,%2) ? true : false)
+#define flag_set(%1,%2) %1 |= (1 << (%2 & 31))
+
 new g_MaxPlayers
 new g_HudSync
+new g_PlagueMode
 
 new cvar_plague_chance, cvar_plague_min_players
 new cvar_plague_ratio
@@ -49,7 +54,7 @@ public plugin_precache()
 {
 	// Register game mode at precache (plugin gets paused after this)
 	register_plugin("[ZP] Game Mode: Plague", ZP_VERSION_STRING, "ZP Dev Team")
-	zp_gamemodes_register("Plague Mode")
+	g_PlagueMode = zp_gamemodes_register("Plague Mode")
 	
 	// Create the HUD Sync Objects
 	g_HudSync = CreateHudSyncObj()
@@ -102,10 +107,12 @@ public plugin_precache()
 // Deathmatch module's player respawn forward
 public zp_fw_deathmatch_respawn_pre(id)
 {
-	// Respawning allowed?
-	if (!get_pcvar_num(cvar_plague_allow_respawn))
-		return PLUGIN_HANDLED;
-	
+	if(is_plague_mod(zp_gamemodes_get_current()))
+	{
+		// Respawning allowed?
+		if (!get_pcvar_num(cvar_plague_allow_respawn))
+			return PLUGIN_HANDLED;
+	}
 	return PLUGIN_CONTINUE;
 }
 
@@ -132,13 +139,18 @@ public zp_fw_gamemodes_choose_pre(game_mode_id, skipchecks)
 	return PLUGIN_CONTINUE;
 }
 
-public zp_fw_gamemodes_start()
+public zp_fw_gamemodes_start(game_mode_id)
 {
+	if(!is_plague_mod(game_mode_id))
+		return;
+	
 	// Calculate player counts
 	new id, alive_count = GetAliveCount()
 	new survivor_count = get_pcvar_num(cvar_plague_survivor_count)
 	new nemesis_count = get_pcvar_num(cvar_plague_nemesis_count)
 	new zombie_count = floatround((alive_count - (nemesis_count + survivor_count)) * get_pcvar_float(cvar_plague_ratio), floatround_ceil)
+	
+	new is_zombie, is_nemesis, is_survivor;
 	
 	// Turn specified amount of players into Survivors
 	new iSurvivors, iMaxSurvivors = survivor_count
@@ -148,12 +160,13 @@ public zp_fw_gamemodes_start()
 		id = GetRandomAlive(random_num(1, alive_count))
 		
 		// Already a survivor?
-		if (zp_class_survivor_get(id))
+		if (zp_class_survivor_get(id) || flag_get_boolean(is_survivor, id))
 			continue;
 		
 		// If not, turn him into one
-		zp_class_survivor_set(id)
-		iSurvivors++
+		zp_class_survivor_set(id);
+		flag_set(is_survivor, id);
+		iSurvivors++;
 		
 		// Apply survivor health multiplier
 		set_user_health(id, floatround(get_user_health(id) * get_pcvar_float(cvar_plague_surv_hp_multi)))
@@ -167,12 +180,13 @@ public zp_fw_gamemodes_start()
 		id = GetRandomAlive(random_num(1, alive_count))
 		
 		// Already a survivor or nemesis?
-		if (zp_class_survivor_get(id) || zp_class_nemesis_get(id))
+		if (zp_class_survivor_get(id) || zp_class_nemesis_get(id) || flag_get_boolean(is_survivor, id) || flag_get_boolean(is_nemesis, id))
 			continue;
 		
 		// If not, turn him into one
-		zp_class_nemesis_set(id)
-		iNemesis++
+		zp_class_nemesis_set(id);
+		flag_set(is_nemesis, id);
+		iNemesis++;
 		
 		// Apply nemesis health multiplier
 		set_user_health(id, floatround(get_user_health(id) * get_pcvar_float(cvar_plague_nem_hp_multi)))
@@ -186,12 +200,13 @@ public zp_fw_gamemodes_start()
 		id = GetRandomAlive(random_num(1, alive_count))
 		
 		// Already a zombie/nemesis or survivor
-		if (zp_class_survivor_get(id) || zp_core_is_zombie(id))
+		if (zp_class_survivor_get(id) || zp_core_is_zombie(id) || flag_get_boolean(is_survivor, id) || flag_get_boolean(is_zombie, id))
 			continue;
 		
 		// Turn into a zombie
-		zp_core_infect(id, 0)
-		iZombies++
+		zp_core_infect(id, 0);
+		flag_set(is_zombie, id);
+		iZombies++;
 	}
 	
 	// Turn the remaining players into humans
@@ -202,7 +217,7 @@ public zp_fw_gamemodes_start()
 			continue;
 		
 		// Only those who aren't zombies/nemesis or survivors
-		if (zp_class_survivor_get(id) || zp_core_is_zombie(id))
+		if (zp_class_survivor_get(id) || zp_core_is_zombie(id) || flag_get_boolean(is_survivor, id) || flag_get_boolean(is_zombie, id))
 			continue;
 		
 		// Switch to CT
@@ -263,4 +278,9 @@ GetRandomAlive(target_index)
 	}
 	
 	return -1;
+}
+
+bool:is_plague_mod(game_mode_id)
+{
+	return g_PlagueMode != ZP_INVALID_GAME_MODE && game_mode_id == g_PlagueMode;
 }

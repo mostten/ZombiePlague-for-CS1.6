@@ -20,18 +20,11 @@
 #define LIBRARY_SURVIVOR "zp50_class_survivor"
 #include <zp50_class_survivor>
 
-// 扩展Ghost模式
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
-
 #include <zp50_colorchat>
 #include <zp50_log>
 
 // Settings file
 new const ZP_SETTINGS_FILE[] = "zombieplague.ini"
-
-// Settings file for ghost mod
-new const ZP_GHOST_SETTINGS_FILE[] = "zombieplague_mod_ghost.ini"
 
 #define ACCESSFLAG_MAX_LENGTH 2
 
@@ -41,11 +34,10 @@ new g_access_make_human[ACCESSFLAG_MAX_LENGTH] = "d"
 new g_access_respawn_players[ACCESSFLAG_MAX_LENGTH] = "d"
 new g_access_make_nemesis[ACCESSFLAG_MAX_LENGTH] = "d"
 new g_access_make_survivor[ACCESSFLAG_MAX_LENGTH] = "d"
-new g_access_make_ghost[ACCESSFLAG_MAX_LENGTH] = "d"
 new g_access_start_game_mode[ACCESSFLAG_MAX_LENGTH] = "d"
 
 new g_MaxPlayers
-new g_GameModeInfectionID, g_GameModeNemesisID, g_GameModeSurvivorID, g_GameModeGhostID
+new g_GameModeInfectionID, g_GameModeNemesisID, g_GameModeSurvivorID
 
 new cvar_amx_show_activity
 new cvar_deathmatch
@@ -60,10 +52,6 @@ public plugin_init()
 	register_concmd("zp_human", "cmd_human", _, "<target> - Turn someone back to Human", 0)
 	register_concmd("zp_respawn", "cmd_respawn", _, "<target> - Respawn someone", 0)
 	register_concmd("zp_start_game_mode", "cmd_start_game_mode", _, "<game mode id> - Start specific game mode", 0)
-	
-	// Ghost Class loaded?
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library))
-		register_concmd("zp_ghost", "cmd_ghost", _, "<target> - Turn someone into a Ghost", 0)
 	
 	// Nemesis Class loaded?
 	if (LibraryExists(LIBRARY_NEMESIS, LibType_Library))
@@ -89,8 +77,6 @@ public plugin_precache()
 		amx_save_setting_string(ZP_SETTINGS_FILE, "Access Flags", "MAKE NEMESIS", g_access_make_nemesis)
 	if (!amx_load_setting_string(ZP_SETTINGS_FILE, "Access Flags", "MAKE SURVIVOR", g_access_make_survivor, charsmax(g_access_make_survivor)))
 		amx_save_setting_string(ZP_SETTINGS_FILE, "Access Flags", "MAKE SURVIVOR", g_access_make_survivor)
-	if (!amx_load_setting_string(ZP_GHOST_SETTINGS_FILE, "Access Flags", "MAKE GHOST", g_access_make_ghost, charsmax(g_access_make_ghost)))
-		amx_save_setting_string(ZP_GHOST_SETTINGS_FILE, "Access Flags", "MAKE GHOST", g_access_make_ghost)
 	if (!amx_load_setting_string(ZP_SETTINGS_FILE, "Access Flags", "RESPAWN PLAYERS", g_access_respawn_players, charsmax(g_access_respawn_players)))
 		amx_save_setting_string(ZP_SETTINGS_FILE, "Access Flags", "RESPAWN PLAYERS", g_access_respawn_players)
 	if (!amx_load_setting_string(ZP_SETTINGS_FILE, "Access Flags", "START GAME MODE", g_access_start_game_mode, charsmax(g_access_start_game_mode)))
@@ -104,7 +90,6 @@ public plugin_natives()
 	register_native("zp_admin_commands_human", "native_admin_commands_human")
 	register_native("zp_admin_commands_nemesis", "native_admin_commands_nemesis")
 	register_native("zp_admin_commands_survivor", "native_admin_commands_survivor")
-	register_native("zp_admin_commands_ghost", "native_admin_commands_ghost")
 	register_native("zp_admin_commands_respawn", "native_admin_commands_respawn")
 	register_native("zp_admin_commands_start_mode", "_admin_commands_start_mode")
 	
@@ -113,7 +98,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -133,7 +118,6 @@ public plugin_cfg()
 	g_GameModeInfectionID = zp_gamemodes_get_id("Infection Mode")
 	g_GameModeNemesisID = zp_gamemodes_get_id("Nemesis Mode")
 	g_GameModeSurvivorID = zp_gamemodes_get_id("Survivor Mode")
-	g_GameModeGhostID = zp_gamemodes_get_id("Ghost Mode")
 }
 
 public native_admin_commands_zombie(plugin_id, num_params)
@@ -229,32 +213,6 @@ public native_admin_commands_survivor(plugin_id, num_params)
 		return false;
 	
 	command_survivor(id_admin, player)
-	return true;
-}
-
-public native_admin_commands_ghost(plugin_id, num_params)
-{
-	new id_admin = get_param(1)
-	
-	if (!is_user_connected(id_admin))
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Ghost Invalid Player (%d)", id_admin)
-		return false;
-	}
-	
-	new player = get_param(2)
-	
-	if (!is_user_alive(player))
-	{
-		log_error(AMX_ERR_NATIVE, "[ZP] Ghost Invalid Player (%d)", player)
-		return false;
-	}
-	
-	// Ghost class not present
-	if (!LibraryExists(LIBRARY_GHOST, LibType_Library))
-		return false;
-	
-	command_ghost(id_admin, player)
 	return true;
 }
 
@@ -416,34 +374,6 @@ public cmd_survivor(id, level, cid)
 	}
 	
 	command_survivor(id, player)
-	return PLUGIN_HANDLED;
-}
-
-// zp_ghost [target]
-public cmd_ghost(id, level, cid)
-{
-	// Check for access flag - Make Ghost
-	if (!cmd_access(id, read_flags(g_access_make_ghost), cid, 2))
-		return PLUGIN_HANDLED;
-	
-	// Retrieve arguments
-	new arg[32], player
-	read_argv(1, arg, charsmax(arg))
-	player = cmd_target(id, arg, (CMDTARGET_ONLY_ALIVE | CMDTARGET_ALLOW_SELF))
-	
-	// Invalid target
-	if (!player) return PLUGIN_HANDLED;
-	
-	// Target not allowed to be ghost
-	if (zp_class_ghost_get(player))
-	{
-		new player_name[32]
-		get_user_name(player, player_name, charsmax(player_name))
-		client_print(id, print_console, "[ZP] %L (%s).", id, "ALREADY_GHOST", player_name)
-		return PLUGIN_HANDLED;
-	}
-	
-	command_ghost(id, player)
 	return PLUGIN_HANDLED;
 }
 
@@ -728,64 +658,6 @@ command_survivor(id, player)
 		get_user_authid(id, authid, charsmax(authid))
 		get_user_ip(id, ip, charsmax(ip), 1)
 		zp_log("ADMIN %s <%s><%s> - %s %L (Players: %d)", admin_name, authid, ip, player_name, LANG_SERVER, "CMD_SURVIVAL", GetPlayingCount())
-	}
-}
-
-// Admin Command. zp_ghost
-command_ghost(id, player)
-{
-	// Prevent infecting last human
-	if (zp_core_is_last_human(player))
-	{
-		zp_colored_print(id, "%L", id, "CMD_CANT_LAST_HUMAN")
-		return;
-	}
-	
-	// Check if a game mode is in progress
-	if (zp_gamemodes_get_current() == ZP_NO_GAME_MODE)
-	{
-		// Ghost mode disabled
-		if (g_GameModeGhostID == ZP_INVALID_GAME_MODE)
-		{
-			zp_colored_print(id, "%L", id, "CMD_ONLY_AFTER_GAME_MODE")
-			return;
-		}
-		
-		// Start ghost game mode with this target player
-		if (!zp_gamemodes_start(g_GameModeGhostID, player))
-		{
-			zp_colored_print(id, "%L", id, "GAME_MODE_CANT_START")
-			return;
-		}
-	}
-	else
-	{
-		// Make player ghost himself
-		zp_class_ghost_set(player, player)
-	}
-	
-	// Get user names
-	new admin_name[32], player_name[32]
-	get_user_name(id, admin_name, charsmax(admin_name))
-	get_user_name(player, player_name, charsmax(player_name))
-	
-	// Show activity?
-	if (cvar_amx_show_activity)
-	{
-		switch (get_pcvar_num(cvar_amx_show_activity))
-		{
-			case 1: zp_colored_print(0, "ADMIN - %s %L", player_name, LANG_PLAYER, "CMD_GHOST")
-			case 2: zp_colored_print(0, "ADMIN %s - %s %L", admin_name, player_name, LANG_PLAYER, "CMD_GHOST")
-		}
-	}
-	
-	// Log to Zombie Plague log file?
-	if (get_pcvar_num(cvar_log_admin_commands))
-	{
-		new authid[32], ip[16]
-		get_user_authid(id, authid, charsmax(authid))
-		get_user_ip(id, ip, charsmax(ip), 1)
-		zp_log("ADMIN %s <%s><%s> - %s %L (Players: %d)", admin_name, authid, ip, player_name, LANG_SERVER, "CMD_GHOST", GetPlayingCount())
 	}
 }
 

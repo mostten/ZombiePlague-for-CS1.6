@@ -21,7 +21,7 @@
  * @param id		Player index.
  * @return			True if it is, false otherwise.
  */
-native zp_class_nemesis_get(id)
+native bool:zp_class_nemesis_get(id)
 
 /**
  * Forces a player to become a Nemesis.
@@ -47,3 +47,22 @@ native zp_class_nemesis_get_count()
  * @return			Maximum amount of health points, -1 on error.
  */
 native zp_class_nemesis_get_maxhealth(id)
+
+/**
+ * Called right when class init.
+ *
+ * Possible return values are:
+ *	- PLUGIN_HANDLED to block
+ *
+ * @param id			Player index.
+ * @param classid		Internal nemesis class ID.
+ */
+forward zp_fw_nemesis_init_pre(id, classid);
+
+/**
+ * Called right when class inited.
+ *
+ * @param id			Player index.
+ * @param classid		Internal nemesis class ID.
+ */
+forward zp_fw_nemesis_init_post(id, classid);

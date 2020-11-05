@@ -14,11 +14,8 @@
 #include <hamsandwich>
 #include <cs_ham_bots_api>
 #include <zp50_core>
+#define LIBRARY_HUMAN "zp50_class_human"
 #include <zp50_class_human>
-#define LIBRARY_NEMESIS "zp50_class_nemesis"
-#include <zp50_class_nemesis>
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
 
 new cvar_zombie_defense, cvar_zombie_hitzones
 
@@ -42,7 +39,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_HUMAN))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -87,14 +84,6 @@ public fw_TakeDamage(victim, inflictor, attacker, Float:damage, damage_type)
 	// Human attacking zombie...
 	if (!zp_core_is_zombie(attacker) && zp_core_is_zombie(victim))
 	{
-		// Ignore for Ghost
-		if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(attacker))
-			return HAM_IGNORED;
-		
-		// Ignore for Nemesis
-		if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(attacker))
-			return HAM_IGNORED;
-		
 		// Reset damage
 		new Float:damage_old = damage;
 		reset_user_damage(attacker, damage);

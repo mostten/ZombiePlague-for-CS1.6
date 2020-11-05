@@ -18,8 +18,6 @@
 #include <zp50_class_nemesis>
 #define LIBRARY_SURVIVOR "zp50_class_survivor"
 #include <zp50_class_survivor>
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
 
 // Settings file
 new const ZP_SETTINGS_FILE[] = "zombieplague.ini"
@@ -148,7 +146,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -171,10 +169,6 @@ public zp_fw_core_infect_post(id, attacker)
 	if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(id))
 		return;
 		
-	// Skip for Ghost
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(id))
-		return;
-	
 	// Apply admin zombie player model?
 	if (get_pcvar_num(cvar_admin_models_zombie_player))
 	{

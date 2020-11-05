@@ -32,6 +32,10 @@ const Float:zombieclass5_gravity = 1.0
 const Float:zombieclass5_knockback = 1.25
 const bool:zombieclass5_infection = true;
 const bool:zombieclass5_blood = true;
+const Float:intervalPrimaryAttack = -1.0;
+const Float:intervalSecondaryAttack = -1.0;
+const Float:damagePrimaryAttack = -1.0;
+const Float:damageSecondaryAttack = -1.0;
 new zombieclass5_hp_reward = 200 // extra hp for infections/kills
 
 new g_ZombieClassID
@@ -42,7 +46,7 @@ public plugin_precache()
 	
 	new index
 	
-	g_ZombieClassID = zp_class_zombie_register(zombieclass5_name, zombieclass5_info, zombieclass5_health, zombieclass5_speed, zombieclass5_gravity, zombieclass5_infection, zombieclass5_blood)
+	g_ZombieClassID = zp_class_zombie_register(zombieclass5_name, zombieclass5_info, zombieclass5_health, zombieclass5_speed, zombieclass5_gravity, zombieclass5_infection, intervalPrimaryAttack, intervalSecondaryAttack, damagePrimaryAttack, damageSecondaryAttack, zombieclass5_blood)
 	zp_class_zombie_register_kb(g_ZombieClassID, zombieclass5_knockback)
 	for (index = 0; index < sizeof zombieclass5_models; index++)
 		zp_class_zombie_register_model(g_ZombieClassID, zombieclass5_models[index])

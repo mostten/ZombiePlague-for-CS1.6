@@ -9,8 +9,6 @@
 #include <zp50_class_nemesis>
 #define LIBRARY_SURVIVOR "zp50_class_survivor"
 #include <zp50_class_survivor>
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
 
 #define NAME_MAX_LENGTH 128
 #define SOUND_MAX_LENGTH 64
@@ -34,7 +32,6 @@ new Array:g_radio_replaces;
 enum RadioTeam{
 	RadioTeam_Zombie = 0,
 	RadioTeam_Human,
-	RadioTeam_Ghost,
 	RadioTeam_Nemesis,
 	RadioTeam_Survivor
 };
@@ -78,13 +75,11 @@ public plugin_natives()
 	
 	register_native("zp_radio_reg_zombie", "native_radio_reg_zombie");
 	register_native("zp_radio_reg_human", "native_radio_reg_human");
-	register_native("zp_radio_reg_ghost", "native_radio_reg_ghost");
 	register_native("zp_radio_reg_nemesis", "native_radio_reg_nemesis");
 	register_native("zp_radio_reg_survivor", "native_radio_reg_survivor");
 	
 	register_native("zp_radio_replace_zombie", "native_radio_replace_zombie");
 	register_native("zp_radio_replace_human", "native_radio_replace_human");
-	register_native("zp_radio_replace_ghost", "native_radio_replace_ghost");
 	register_native("zp_radio_replace_nemesis", "native_radio_replace_nemesis");
 	register_native("zp_radio_replace_survivor", "native_radio_replace_survivor");
 	
@@ -97,7 +92,7 @@ public plugin_natives()
 
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -208,30 +203,6 @@ public native_radio_reg_human(plugin_id, num_params)
 	return push_radio_array(name, name_trans, message, message_trans, sound, radio_menu, radio_team, radio_class);
 }
 
-public native_radio_reg_ghost(plugin_id, num_params)
-{
-	new name[NAME_MAX_LENGTH];
-	get_string(1, name, charsmax(name));
-	
-	new bool:name_trans = bool:get_param(2);
-	
-	new message[MESSAGE_MAX_LENGTH];
-	get_string(3, message, charsmax(message));
-	
-	new bool:message_trans = bool:get_param(4);
-	
-	new sound[SOUND_MAX_LENGTH];
-	get_string(5, sound, charsmax(sound));
-	
-	new RadioMenu:radio_menu = RadioMenu:get_param(6);
-	
-	new RadioTeam:radio_team = RadioTeam_Ghost;
-	
-	new radio_class = get_param(7);
-	
-	return push_radio_array(name, name_trans, message, message_trans, sound, radio_menu, radio_team, radio_class);
-}
-
 public native_radio_reg_nemesis(plugin_id, num_params)
 {
 	new name[NAME_MAX_LENGTH];
@@ -296,16 +267,6 @@ public native_radio_replace_human(plugin_id, num_params)
 	get_string(1, search, charsmax(search));
 	get_string(2, replace, charsmax(replace));
 	new RadioTeam:radio_team = RadioTeam_Human;
-	new classid = get_param(3);
-	return push_replace_array(search, replace, radio_team, classid);
-}
-
-public native_radio_replace_ghost(plugin_id, num_params)
-{
-	new search[SOUND_MAX_LENGTH], replace[SOUND_MAX_LENGTH];
-	get_string(1, search, charsmax(search));
-	get_string(2, replace, charsmax(replace));
-	new RadioTeam:radio_team = RadioTeam_Ghost;
 	new classid = get_param(3);
 	return push_replace_array(search, replace, radio_team, classid);
 }
@@ -480,8 +441,6 @@ RadioTeam:get_user_radio_team(client)
 	{
 		if(LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(client))
 			return RadioTeam_Nemesis;
-		else if(LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(client))
-			return RadioTeam_Ghost;
 		else if(LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(client))
 			return RadioTeam_Survivor;
 		else if(zp_core_is_zombie(client))
@@ -501,12 +460,6 @@ get_user_radio_class(client)
 			{
 				classid = zp_class_human_get_current(client);
 				if(classid != ZP_INVALID_HUMAN_CLASS)
-					return classid;
-			}
-			case RadioTeam_Ghost:
-			{
-				classid = zp_class_ghost_get_current(client);
-				if(classid != ZP_INVALID_GHOST_CLASS)
 					return classid;
 			}
 			case RadioTeam_Zombie:

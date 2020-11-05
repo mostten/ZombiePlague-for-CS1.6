@@ -7,7 +7,7 @@
 new const sound_nemesis_pain[][] = { "zombie_plague/nemesis_pain1.wav" , "zombie_plague/nemesis_pain2.wav" , "zombie_plague/nemesis_pain3.wav" }
 new const sound_nemesis_die[][] = { "zombie_plague/zombie_die1.wav" , "zombie_plague/zombie_die2.wav" , "zombie_plague/zombie_die3.wav" , "zombie_plague/zombie_die4.wav" , "zombie_plague/zombie_die5.wav" }
 new const sound_nemesis_fall[][] = { "zombie_plague/zombie_fall1.wav" }
-new const sound_nemesis_miss_slash[][] = { "zombie_plague/ghost/claw/zombie_swing_1.wav" , "zombie_plague/ghost/claw/zombie_swing_2.wav" }
+new const sound_nemesis_miss_slash[][] = { "zombie_plague/zaphie/claw/zombie_swing_1.wav" , "zombie_plague/zaphie/claw/zombie_swing_2.wav" }
 new const sound_nemesis_miss_wall[][] = { "weapons/knife_hitwall1.wav" }
 new const sound_nemesis_hit_normal[][] = { "weapons/knife_hit1.wav" , "weapons/knife_hit2.wav" , "weapons/knife_hit3.wav" , "weapons/knife_hit4.wav" }
 new const sound_nemesis_hit_stab[][] = { "weapons/knife_stab.wav" }

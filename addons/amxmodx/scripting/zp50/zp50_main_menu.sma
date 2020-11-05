@@ -18,8 +18,6 @@
 #include <zp50_class_zombie>
 #define LIBRARY_HUMANCLASSES "zp50_class_human"
 #include <zp50_class_human>
-#define LIBRARY_GHOSTCLASSES "zp50_class_ghost"
-#include <zp50_class_ghost>
 #define LIBRARY_ITEMS "zp50_items"
 #include <zp50_items>
 #define LIBRARY_ADMIN_MENU "zp50_admin_menu"
@@ -68,7 +66,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_BUYMENUS) || equal(module, LIBRARY_ZOMBIECLASSES) || equal(module, LIBRARY_HUMANCLASSES) || equal(module, LIBRARY_GHOSTCLASSES) || equal(module, LIBRARY_ITEMS) || equal(module, LIBRARY_ADMIN_MENU) || equal(module, LIBRARY_RANDOMSPAWN))
+	if (equal(module, LIBRARY_BUYMENUS) || equal(module, LIBRARY_ZOMBIECLASSES) || equal(module, LIBRARY_HUMANCLASSES) || equal(module, LIBRARY_ITEMS) || equal(module, LIBRARY_ADMIN_MENU) || equal(module, LIBRARY_RANDOMSPAWN))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -160,26 +158,19 @@ show_menu_main(id)
 	else
 		len += formatex(menu[len], charsmax(menu) - len, "\d4. %L^n", id, "MENU_HCLASS")
 	
-	// 5. Ghost class
-	if (LibraryExists(LIBRARY_GHOSTCLASSES, LibType_Library) && zp_class_ghost_get_count() > 1)
-		len += formatex(menu[len], charsmax(menu) - len, "\r5.\w %L^n", id, "MENU_GCLASS")
-	else
-		len += formatex(menu[len], charsmax(menu) - len, "\d5. %L^n", id, "MENU_GCLASS")
-	
-	
-	// 6. Unstuck
+	// 5. Unstuck
 	if (LibraryExists(LIBRARY_RANDOMSPAWN, LibType_Library) && is_user_alive(id))
 		len += formatex(menu[len], charsmax(menu) - len, "\r6.\w %L^n", id, "MENU_UNSTUCK")
 	else
 		len += formatex(menu[len], charsmax(menu) - len, "\d6. %L^n", id, "MENU_UNSTUCK")
 	
-	// 7. Help
+	// 6. Help
 	len += formatex(menu[len], charsmax(menu) - len, "\r7.\w %L^n^n", id, "MENU_INFO")
 	
-	// 8. Choose Team
+	// 7. Choose Team
 	len += formatex(menu[len], charsmax(menu) - len, "\r8.\w %L^n^n", id, "MENU_CHOOSE_TEAM")
 	
-	// 9. Admin menu
+	// 8. Admin menu
 	if (LibraryExists(LIBRARY_ADMIN_MENU, LibType_Library) && is_user_admin(id))
 		len += formatex(menu[len], charsmax(menu) - len, "\r9.\w %L", id, "MENU_ADMIN")
 	else
@@ -245,14 +236,7 @@ public menu_main(id, key)
 			else
 				zp_colored_print(id, "%L", id, "CMD_NOT_HCLASSES")
 		}
-		case 4: // Ghost Classes
-		{
-			if (LibraryExists(LIBRARY_GHOSTCLASSES, LibType_Library) && zp_class_ghost_get_count() > 1)
-				zp_class_ghost_show_menu(id)
-			else
-				zp_colored_print(id, "%L", id, "CMD_NOT_GCLASSES")
-		}
-		case 5:
+		case 4:
 		{
 			// Check if player is stuck
 			if (LibraryExists(LIBRARY_RANDOMSPAWN, LibType_Library) && is_user_alive(id))
@@ -271,16 +255,16 @@ public menu_main(id, key)
 			else
 				zp_colored_print(id, "%L", id, "CMD_NOT")
 		}
-		case 6: // Help Menu
+		case 5: // Help Menu
 		{
 			show_help(id)
 		}
-		case 7: // Menu override
+		case 6: // Menu override
 		{
 			flag_unset(g_ChooseTeamOverrideActive, id)
 			client_cmd(id, "chooseteam")
 		}
-		case 8: // Admin Menu
+		case 7: // Admin Menu
 		{
 			if (LibraryExists(LIBRARY_ADMIN_MENU, LibType_Library) && is_user_admin(id))
 				zp_admin_menu_show(id)

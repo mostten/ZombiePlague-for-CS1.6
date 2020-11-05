@@ -18,8 +18,6 @@
 #include <zp50_class_zombie>
 #define LIBRARY_NEMESIS "zp50_class_nemesis"
 #include <zp50_class_nemesis>
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
 
 #define TASK_FROZEN 100
 #define ID_FROZEN (taskid - TASK_FROZEN)
@@ -72,7 +70,7 @@ new const WEAPONENTNAMES_UP[][] = { "", "WEAPON_P228", "", "WEAPON_SCOUT", "WEAP
 			"WEAPON_M3", "WEAPON_M4A1", "WEAPON_TMP", "WEAPON_G3SG1", "WEAPON_FLASHBANG", "WEAPON_DEAGLE", "WEAPON_SG552",
 			"WEAPON_AK47", "WEAPON_KNIFE", "WEAPON_P90" }
 
-new cvar_noengine_knockback_zombie, cvar_noengine_knockback_ghost, cvar_noengine_knockback_nemesis
+new cvar_noengine_knockback_zombie, cvar_noengine_knockback_nemesis
 new cvar_knockback_power, cvar_knockback_damage, cvar_knockback_obey_class
 new cvar_knockback_zvel, cvar_knockback_ducking, cvar_knockback_distance
 new cvar_knockback_nemesis
@@ -98,7 +96,6 @@ public plugin_init()
 	cvar_knockback_ducking = register_cvar("zp_knockback_ducking", "0.25")
 	cvar_knockback_distance = register_cvar("zp_knockback_distance", "500")
 	cvar_noengine_knockback_nemesis = register_cvar("zp_no_engine_knockback_nemesis", "1")
-	cvar_noengine_knockback_ghost = register_cvar("zp_no_engine_knockback_ghost", "1")
 	
 	// Nemesis Class loaded?
 	if (LibraryExists(LIBRARY_NEMESIS, LibType_Library))
@@ -125,7 +122,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_NEMESIS))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -204,17 +201,8 @@ public fw_TraceAttack_Post(victim, attacker, Float:damage, Float:direction[3], t
 	}
 	else if (get_pcvar_num(cvar_knockback_obey_class))
 	{
-		// Ghost Class loaded?
-		if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(victim))
-		{
-			// Apply ghost class knockback multiplier
-			xs_vec_mul_scalar(direction, zp_class_ghost_get_kb(zp_class_ghost_get_current(victim)), direction)
-		}
-		else
-		{
-			// Apply zombie class knockback multiplier
-			xs_vec_mul_scalar(direction, zp_class_zombie_get_kb(zp_class_zombie_get_current(victim)), direction)
-		}
+		// Apply zombie class knockback multiplier
+		xs_vec_mul_scalar(direction, zp_class_zombie_get_kb(zp_class_zombie_get_current(victim)), direction)
 	}
 	
 	// Add up the new vector
@@ -257,8 +245,6 @@ bool:is_user_no_engine_knockback(client)
 {
 	if(LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(client))
 		return get_pcvar_num(cvar_noengine_knockback_nemesis) > 0;
-	else if(LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(client))
-		return get_pcvar_num(cvar_noengine_knockback_ghost) > 0;
 	else if(zp_core_is_zombie(client))
 		return get_pcvar_num(cvar_noengine_knockback_zombie) > 0;
 	return false;

@@ -14,13 +14,17 @@
 #include <fakemeta>
 #include <hamsandwich>
 #include <cs_ham_bots_api>
+#include <amx_settings_api>
 #include <zp50_core>
+#include <zp50_gamemodes>
 #define LIBRARY_NEMESIS "zp50_class_nemesis"
 #include <zp50_class_nemesis>
 #define LIBRARY_SURVIVOR "zp50_class_survivor"
 #include <zp50_class_survivor>
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
+#define LIBRARY_ZAPHIE "zp50_class_zaphie"
+#include <zp50_class_zaphie>
+#define LIBRARY_PREDATOR "zp50_class_predator"
+#include <zp50_class_predator>
 
 #define TASK_NIGHTVISION 100
 #define ID_NIGHTVISION (taskid - TASK_NIGHTVISION)
@@ -29,16 +33,32 @@
 #define TASK_SCREENFADE 200
 #define ID_SCREENFADE (taskid - TASK_SCREENFADE)
 
-const UNIT_SECOND = (1<<12);
-const FFADE_IN = 0x0000;
-const FFADE_STAYOUT = 0x0004;
+new const UNIT_SECOND = (1<<12);
+new const FFADE_IN = 0x0000;
+new const FFADE_STAYOUT = 0x0004;
+
+// 配置文件
+new const ZP_SETTINGS_FILE[] = "zombieplague_zaphie.ini";
 
 #define flag_get(%1,%2) (%1 & (1 << (%2 & 31)))
 #define flag_get_boolean(%1,%2) (flag_get(%1,%2) ? true : false)
 #define flag_set(%1,%2) %1 |= (1 << (%2 & 31))
 #define flag_unset(%1,%2) %1 &= ~(1 << (%2 & 31))
 
-new g_NightVisionActive
+enum NvisionType{
+	NvisionType_Original = 0,
+	NvisionType_Dlight,
+	NvisionType_LightStyle
+};
+
+enum _:NvisionInfo{
+	NvisionInfo_GameMod = 0,
+	NvisionType:NvisionInfo_Type
+};
+
+new g_NightVisionActive;
+new Array:g_NvisionInfos = Invalid_Array;
+new NvisionType:g_GameModNvisionType = NvisionType_Original;
 
 new g_MsgNVGToggle, g_MsgScreenFade;
 
@@ -48,7 +68,7 @@ new cvar_nvision_human, cvar_nvision_human_color_R, cvar_nvision_human_color_G, 
 new cvar_nvision_spec, cvar_nvision_spec_color_R, cvar_nvision_spec_color_G, cvar_nvision_spec_color_B
 new cvar_nvision_nemesis, cvar_nvision_nemesis_color_R, cvar_nvision_nemesis_color_G, cvar_nvision_nemesis_color_B
 new cvar_nvision_survivor, cvar_nvision_survivor_color_R, cvar_nvision_survivor_color_G, cvar_nvision_survivor_color_B
-new cvar_nvision_ghost, cvar_nvision_ghost_color_R, cvar_nvision_ghost_color_G, cvar_nvision_ghost_color_B
+new cvar_nvision_zaphie, cvar_nvision_zaphie_color_R, cvar_nvision_zaphie_color_G, cvar_nvision_zaphie_color_B
 
 new g_szCurrentLight[MAXPLAYERS+1][ZP_LIGHTSTYLE_LENGTH];
 
@@ -101,14 +121,16 @@ public plugin_init()
 		cvar_nvision_survivor_color_B = register_cvar("zp_nvision_survivor_color_B", "150")
 	}
 	
-	// Ghost Class loaded?
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library))
+	// Zaphie Class loaded?
+	if (LibraryExists(LIBRARY_ZAPHIE, LibType_Library))
 	{
-		cvar_nvision_ghost = register_cvar("zp_nvision_ghost", "2")
-		cvar_nvision_ghost_color_R = register_cvar("zp_nvision_ghost_color_R", "150")
-		cvar_nvision_ghost_color_G = register_cvar("zp_nvision_ghost_color_G", "0")
-		cvar_nvision_ghost_color_B = register_cvar("zp_nvision_ghost_color_B", "0")
+		cvar_nvision_zaphie = register_cvar("zp_nvision_zaphie", "2")
+		cvar_nvision_zaphie_color_R = register_cvar("zp_nvision_zaphie_color_R", "150")
+		cvar_nvision_zaphie_color_G = register_cvar("zp_nvision_zaphie_color_G", "0")
+		cvar_nvision_zaphie_color_B = register_cvar("zp_nvision_zaphie_color_B", "0")
 	}
+	
+	LoadGamemodsNvisionFile();
 }
 
 public plugin_natives()
@@ -118,7 +140,10 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_NEMESIS)
+		|| equal(module, LIBRARY_SURVIVOR)
+		|| equal(module, LIBRARY_ZAPHIE)
+		|| equal(module, LIBRARY_PREDATOR))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -131,7 +156,12 @@ public native_filter(const name[], index, trap)
 	return PLUGIN_CONTINUE;
 }
 
-public zp_fw_core_infect_post(id, attacker)
+public zp_fw_class_zaphie_init_post(id, classid)
+{
+	zp_fw_class_zombie_init_post(id, classid);
+}
+
+public zp_fw_class_zombie_init_post(id, classid)
 {
 	// Nemesis Class loaded?
 	if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(id))
@@ -156,14 +186,21 @@ public zp_fw_core_infect_post(id, attacker)
 				DisableNightVision(id)
 		}
 	}
-	// Ghost Class loaded?
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(id))
+	// Predator Class loaded?
+	else if (LibraryExists(LIBRARY_PREDATOR, LibType_Library) && zp_class_predator_get(id))
 	{
-		if (get_pcvar_num(cvar_nvision_ghost))
+		//Predator use custom nvg in zp50_class_predator file
+		cs_set_user_nvg(id, 0);
+		DisableNightVision(id);
+	}
+	// Zaphie Class loaded?
+	else if (LibraryExists(LIBRARY_ZAPHIE, LibType_Library) && zp_class_zaphie_get(id))
+	{
+		if (get_pcvar_num(cvar_nvision_zaphie))
 		{
 			if (!cs_get_user_nvg(id)) cs_set_user_nvg(id, 1)
 			
-			if (get_pcvar_num(cvar_nvision_ghost) == 2)
+			if (get_pcvar_num(cvar_nvision_zaphie) == 2)
 			{
 				if (!flag_get(g_NightVisionActive, id))
 					clcmd_nightvision_toggle(id)
@@ -287,7 +324,11 @@ public clcmd_nightvision_toggle(id)
 public event_reset_hud(id)
 {
 	if (flag_get(g_NightVisionActive, id))
-		switch(get_pcvar_num(cvar_nvision_custom)){case 0:{cs_set_user_nvg_active(id, 1);}}
+		switch(g_GameModNvisionType)
+		{
+			case NvisionType_Original:{cs_set_user_nvg_active(id, 1);}
+			case NvisionType_LightStyle:{set_user_nightvision(id, true);}
+		}
 }
 
 // Ham Player Killed Post Forward
@@ -300,7 +341,7 @@ public fw_PlayerKilled_Post(victim, attacker, shouldgib)
 public zp_fw_core_set_lightstyle_pre(id, const light_style[ZP_LIGHTSTYLE_LENGTH])
 {
 	g_szCurrentLight[id][0] = light_style[0];
-	if(get_pcvar_num(cvar_nvision_custom) == 2 && flag_get(g_NightVisionActive, id))
+	if(g_GameModNvisionType == NvisionType_LightStyle && flag_get(g_NightVisionActive, id))
 	{
 		zp_core_set_lightstyle(id, "#", false);
 		
@@ -359,7 +400,7 @@ public message_screenfade(msg_id, msg_dest, msg_entity)
 	if (get_msg_arg_int(4) != 255 || get_msg_arg_int(5) != 255 || get_msg_arg_int(6) != 255 || get_msg_arg_int(7) < 200)
 		return PLUGIN_CONTINUE;
 	
-	if(get_pcvar_num(cvar_nvision_custom) == 2)
+	if(g_GameModNvisionType == NvisionType_LightStyle)
 	{
 		remove_task(msg_entity+TASK_SCREENFADE);
 		set_task(get_msg_arg_int(1)/UNIT_SECOND*1.0, "restore_screenfade_task", msg_entity+TASK_SCREENFADE);
@@ -369,7 +410,7 @@ public message_screenfade(msg_id, msg_dest, msg_entity)
 
 public zp_fw_core_set_screenfade_post(id, duration, hold_time, fade_type, red, green, blue, alpha)
 {
-	if(get_pcvar_num(cvar_nvision_custom) == 2)
+	if(g_GameModNvisionType == NvisionType_LightStyle)
 	{
 		remove_task(id+TASK_SCREENFADE);
 		set_task(duration/UNIT_SECOND*1.0, "restore_screenfade_task", id+TASK_SCREENFADE);
@@ -406,11 +447,11 @@ EnableNightVision(id)
 {
 	flag_set(g_NightVisionActive, id)
 	
-	switch(get_pcvar_num(cvar_nvision_custom))
+	switch(g_GameModNvisionType)
 	{
-		case 0:{cs_set_user_nvg_active(id, 1);}
-		case 1:{set_task(0.1, "custom_nightvision_task", id+TASK_NIGHTVISION, _, _, "b");}
-		case 2:{set_user_nightvision(id, true);}
+		case NvisionType_Original:{cs_set_user_nvg_active(id, 1);}
+		case NvisionType_Dlight:{set_task(0.1, "custom_nightvision_task", id+TASK_NIGHTVISION, _, _, "b");}
+		case NvisionType_LightStyle:{set_user_nightvision(id, true);}
 	}
 }
 
@@ -418,11 +459,11 @@ DisableNightVision(id)
 {
 	flag_unset(g_NightVisionActive, id)
 	
-	switch(get_pcvar_num(cvar_nvision_custom))
+	switch(g_GameModNvisionType)
 	{
-		case 0:{cs_set_user_nvg_active(id, 0);}
-		case 1:{remove_task(id+TASK_NIGHTVISION);}
-		case 2:{set_user_nightvision(id, false);}
+		case NvisionType_Original:{cs_set_user_nvg_active(id, 0);}
+		case NvisionType_Dlight:{remove_task(id+TASK_NIGHTVISION);}
+		case NvisionType_LightStyle:{set_user_nightvision(id, false);}
 	}
 }
 
@@ -469,12 +510,12 @@ get_user_nvg_color(client, &red, &green, &blue)
 			green = get_pcvar_num(cvar_nvision_nemesis_color_G);
 			blue = get_pcvar_num(cvar_nvision_nemesis_color_B);
 		}
-		// Ghost Class loaded?
-		else if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(client))
+		// Zaphie Class loaded?
+		else if (LibraryExists(LIBRARY_ZAPHIE, LibType_Library) && zp_class_zaphie_get(client))
 		{
-			red = get_pcvar_num(cvar_nvision_ghost_color_R);
-			green = get_pcvar_num(cvar_nvision_ghost_color_G);
-			blue = get_pcvar_num(cvar_nvision_ghost_color_B);
+			red = get_pcvar_num(cvar_nvision_zaphie_color_R);
+			green = get_pcvar_num(cvar_nvision_zaphie_color_G);
+			blue = get_pcvar_num(cvar_nvision_zaphie_color_B);
 		}
 		else
 		{
@@ -510,4 +551,119 @@ public restore_screenfade_task(taskid)
 	new red, green, blue, alpha = 73;
 	get_user_nvg_color(ID_SCREENFADE, red, green, blue);
 	zp_core_set_screenfade(ID_SCREENFADE, 0, 0, FFADE_STAYOUT, red, green, blue, alpha, false);
+}
+
+public zp_fw_gamemodes_choose_post(game_mode_id, skipchecks)
+{
+	if(game_mode_id == ZP_INVALID_GAME_MODE
+	|| game_mode_id == ZP_NO_GAME_MODE){g_GameModNvisionType = NvisionType_Original;}
+	else{g_GameModNvisionType = GetGamemodNvisionType(game_mode_id);}
+}
+
+GetNvisionInfosIndex(const gamemod, const NvisionType:nvision_type)
+{
+	new index = -1;
+	
+	if(g_NvisionInfos == Invalid_Array){return index;}
+	
+	new count = ArraySize(g_NvisionInfos);
+	
+	if(count <= 0){return index;}
+	
+	new infos[NvisionInfo];
+	for(new i = 0; i < count; i++)
+	{
+		ArrayGetArray(g_NvisionInfos, i, infos);
+		
+		if(infos[NvisionInfo_GameMod] == gamemod
+		&& infos[NvisionInfo_Type] == nvision_type)
+		{
+			index = i;
+			break;
+		}
+	}
+	
+	return index;
+}
+
+AddNvisionInfos(const gamemod, const NvisionType:nvision_type)
+{
+	if(g_NvisionInfos == Invalid_Array){g_NvisionInfos = ArrayCreate(NvisionInfo, 1);}
+	
+	new index = GetNvisionInfosIndex(gamemod, nvision_type);
+	if(index >= 0){return index;}
+	
+	new infos[NvisionInfo];
+	infos[NvisionInfo_GameMod] = gamemod;
+	infos[NvisionInfo_Type] = nvision_type;
+	
+	index = ArrayPushArray(g_NvisionInfos, infos);
+	
+	return index;
+}
+
+NvisionType:GetGamemodNvisionType(const gamemod)
+{
+	new NvisionType:nvision_type = NvisionType:get_pcvar_num(cvar_nvision_custom);
+	
+	if(g_NvisionInfos == Invalid_Array){return nvision_type;}
+	
+	new count = ArraySize(g_NvisionInfos);
+	
+	if(count <= 0){return nvision_type;}
+	
+	new infos[NvisionInfo];
+	new Array:nvisions = ArrayCreate(1, 1);
+	
+	for(new i = 0; i < count; i++)
+	{
+		ArrayGetArray(g_NvisionInfos, i, infos);
+		
+		if(infos[NvisionInfo_GameMod] == gamemod)
+			ArrayPushCell(nvisions, infos[NvisionInfo_Type]);
+	}
+	
+	count = ArraySize(nvisions);
+	
+	if(count > 0)
+		nvision_type = ArrayGetCell(nvisions, random_num(0, count - 1));
+	
+	ArrayDestroy(nvisions);
+	
+	return nvision_type;
+}
+
+LoadGamemodsNvisionFile()
+{
+	for (new gamemod = 0; gamemod < zp_gamemodes_get_count(); gamemod++)
+		LoadGamemodNvisionFile(gamemod);
+}
+
+LoadGamemodNvisionFile(const gamemod)
+{
+	new modename[32], key[64];
+	zp_gamemodes_get_name(gamemod, modename, charsmax(modename));
+	new Array:nvisions = ArrayCreate(1, 1);
+	formatex(key, charsmax(key), "NVISIONS (%s)", modename);
+	amx_load_setting_int_arr(ZP_SETTINGS_FILE, "Nvisions", key, nvisions);
+	
+	new count = ArraySize(nvisions);
+	new NvisionType:nvision = NvisionType:get_pcvar_num(cvar_nvision_custom);
+	if (count > 0)
+	{
+		for (new index = 0; index < count; index++)
+		{
+			nvision = ArrayGetCell(nvisions, index);
+			AddNvisionInfos(gamemod, nvision);
+		}
+	}
+	else
+	{
+		ArrayPushCell(nvisions, nvision);
+		AddNvisionInfos(gamemod, nvision);
+		
+		// Save to file
+		amx_save_setting_int_arr(ZP_SETTINGS_FILE, "Nvisions", key, nvisions);
+	}
+	ArrayDestroy(nvisions);
 }

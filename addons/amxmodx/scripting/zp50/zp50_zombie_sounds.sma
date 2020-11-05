@@ -22,8 +22,6 @@
 #include <zp50_class_nemesis>
 #define LIBRARY_SURVIVOR "zp50_class_survivor"
 #include <zp50_class_survivor>
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
 
 #define ZP_INVALID_TEAM_CLASS -1
 #define ZP_STEP_DELAY 0.7
@@ -36,7 +34,6 @@
 
 enum SoundTeam{
 	SoundTeam_Human = 0,
-	SoundTeam_Ghost,
 	SoundTeam_Zombie,
 	SoundTeam_Nemesis,
 	SoundTeam_Survivor
@@ -66,31 +63,17 @@ enum _:SoundInfo{
 // Settings file
 new const ZP_SETTINGS_FILE[] = "zombieplague.ini"
 
-// Settings file for ghost
-new const ZP_GHOST_SETTINGS_FILE[] = "zombieplague_mod_ghost.ini"
-
 // Default sounds
 new const sound_zombie_pain[][] = { "zombie_plague/zombie_pain1.wav" , "zombie_plague/zombie_pain2.wav" , "zombie_plague/zombie_pain3.wav" , "zombie_plague/zombie_pain4.wav" , "zombie_plague/zombie_pain5.wav" }
 new const sound_nemesis_pain[][] = { "zombie_plague/nemesis_pain1.wav" , "zombie_plague/nemesis_pain2.wav" , "zombie_plague/nemesis_pain3.wav" }
 new const sound_zombie_die[][] = { "zombie_plague/zombie_die1.wav" , "zombie_plague/zombie_die2.wav" , "zombie_plague/zombie_die3.wav" , "zombie_plague/zombie_die4.wav" , "zombie_plague/zombie_die5.wav" }
 new const sound_zombie_fall[][] = { "zombie_plague/zombie_fall1.wav" }
-new const sound_zombie_miss_slash[][] = { "zombie_plague/ghost/claw/zombie_swing_1.wav" , "zombie_plague/ghost/claw/zombie_swing_2.wav" }
+new const sound_zombie_miss_slash[][] = { "zombie_plague/zaphie/claw/zombie_swing_1.wav" , "zombie_plague/zaphie/claw/zombie_swing_2.wav" }
 new const sound_zombie_miss_wall[][] = { "weapons/knife_hitwall1.wav" }
 new const sound_zombie_hit_normal[][] = { "weapons/knife_hit1.wav" , "weapons/knife_hit2.wav" , "weapons/knife_hit3.wav" , "weapons/knife_hit4.wav" }
 new const sound_zombie_hit_stab[][] = { "weapons/knife_stab.wav" }
 new const sound_zombie_idle[][] = { "nihilanth/nil_now_die.wav" , "nihilanth/nil_slaves.wav" , "nihilanth/nil_alone.wav" , "zombie_plague/zombie_brains1.wav" , "zombie_plague/zombie_brains2.wav" }
 new const sound_zombie_idle_last[][] = { "nihilanth/nil_thelast.wav" }
-
-// Ghost sounds
-new const sound_ghost_pain[][] = { "zombie_plague/nemesis_pain1.wav" , "zombie_plague/nemesis_pain2.wav" , "zombie_plague/nemesis_pain3.wav" }
-new const sound_ghost_die[][] = { "zombie_plague/ghost/zbs_death_female_1.wav" }
-new const sound_ghost_fall[][] = { "zombie_plague/zombie_fall1.wav" }
-new const sound_ghost_miss_slash[][] = { "zombie_plague/ghost/claw/zombie_ghost_midslash01.wav" , "zombie_plague/ghost/claw/zombie_ghost_midslash02.wav" }
-new const sound_ghost_miss_wall[][] = { "zombie_plague/ghost/claw/zombie_ghost_draw.wav" }
-new const sound_ghost_hit_normal[][] = { "zombie_plague/ghost/claw/zombie_hit1.wav" , "zombie_plague/ghost/claw/zombie_hit2.wav" , "zombie_plague/ghost/claw/zombie_hit3.wav" , "zombie_plague/ghost/claw/zombie_hit4.wav" }
-new const sound_ghost_hit_stab[][] = { "zombie_plague/ghost/claw/zombie_ghost_stab.wav" , "zombie_plague/ghost/claw/zombie_ghost_stabmiss.wav" }
-new const sound_ghost_idle[][] = { "zombie_plague/ghost/ambience/zombie_ghost_idle01.wav" , "zombie_plague/ghost/ambience/zombie_ghost_idle02.wav" }
-new const sound_ghost_idle_last[][] = { "zombie_plague/ghost/ambience/zombie_ghost_idle03.wav" }
 
 // Custom sounds
 new Array:g_sound_files;
@@ -123,14 +106,12 @@ public plugin_precache()
 	// Precache sounds
 	zombie_precache();
 	nemesis_precache();
-	ghost_precache();
 }
 
 public plugin_natives()
 {
 	register_library("zp50_zombie_sounds");
 	register_native("zp_zombie_register_sound", "native_zombie_register_sound");
-	register_native("zp_ghost_register_sound", "native_ghost_register_sound");
 	register_native("zp_human_register_sound", "native_human_register_sound");
 	register_native("zp_survivor_register_sound", "native_survivor_register_sound");
 	register_native("zp_nemesis_register_sound", "native_nemesis_register_sound");
@@ -140,7 +121,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -160,166 +141,6 @@ sound_arrays_initialize()
 		g_sound_files = ArrayCreate(SOUND_MAX_LENGTH, 1);
 	if(g_sound_infos == Invalid_Array)
 		g_sound_infos = ArrayCreate(SoundInfo, 1);
-}
-
-ghost_precache()
-{
-	// Initialize ghost arrays
-	new Array:ghost_pain = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_die = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_fall = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_miss_slash = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_miss_wall = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_hit_normal = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_hit_stab = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_idle = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	new Array:ghost_idle_last = ArrayCreate(SOUND_MAX_LENGTH, 1);
-	
-	// Load ghost sounds from external file
-	amx_load_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST PAIN", ghost_pain);
-	amx_load_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST DIE", ghost_die);
-	amx_load_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST FALL", ghost_fall);
-	amx_load_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST MISS SLASH", ghost_miss_slash);
-	amx_load_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST MISS WALL", ghost_miss_wall);
-	amx_load_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST HIT NORMAL", ghost_hit_normal);
-	amx_load_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST HIT STAB", ghost_hit_stab);
-	amx_load_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST IDLE", ghost_idle);
-	amx_load_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST IDLE LAST", ghost_idle_last);
-	
-	// If we couldn't load custom sounds from file, use and save default ones
-	new index;
-	if (ArraySize(ghost_pain) == 0)
-	{
-		for (index = 0; index < sizeof sound_ghost_pain; index++)
-			ArrayPushString(ghost_pain, sound_ghost_pain[index])
-		
-		// Save to external file
-		amx_save_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST PAIN", ghost_pain)
-	}
-	if (ArraySize(ghost_die) == 0)
-	{
-		for (index = 0; index < sizeof sound_ghost_die; index++)
-			ArrayPushString(ghost_die, sound_ghost_die[index])
-		
-		// Save to external file
-		amx_save_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST DIE", ghost_die)
-	}
-	if (ArraySize(ghost_fall) == 0)
-	{
-		for (index = 0; index < sizeof sound_ghost_fall; index++)
-			ArrayPushString(ghost_fall, sound_ghost_fall[index])
-		
-		// Save to external file
-		amx_save_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST FALL", ghost_fall)
-	}
-	if (ArraySize(ghost_miss_slash) == 0)
-	{
-		for (index = 0; index < sizeof sound_ghost_miss_slash; index++)
-			ArrayPushString(ghost_miss_slash, sound_ghost_miss_slash[index])
-		
-		// Save to external file
-		amx_save_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST MISS SLASH", ghost_miss_slash)
-	}
-	if (ArraySize(ghost_miss_wall) == 0)
-	{
-		for (index = 0; index < sizeof sound_ghost_miss_wall; index++)
-			ArrayPushString(ghost_miss_wall, sound_ghost_miss_wall[index])
-		
-		// Save to external file
-		amx_save_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST MISS WALL", ghost_miss_wall)
-	}
-	if (ArraySize(ghost_hit_normal) == 0)
-	{
-		for (index = 0; index < sizeof sound_ghost_hit_normal; index++)
-			ArrayPushString(ghost_hit_normal, sound_ghost_hit_normal[index])
-		
-		// Save to external file
-		amx_save_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST HIT NORMAL", ghost_hit_normal)
-	}
-	if (ArraySize(ghost_hit_stab) == 0)
-	{
-		for (index = 0; index < sizeof sound_ghost_hit_stab; index++)
-			ArrayPushString(ghost_hit_stab, sound_ghost_hit_stab[index])
-		
-		// Save to external file
-		amx_save_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST HIT STAB", ghost_hit_stab)
-	}
-	if (ArraySize(ghost_idle) == 0)
-	{
-		for (index = 0; index < sizeof sound_ghost_idle; index++)
-			ArrayPushString(ghost_idle, sound_ghost_idle[index])
-		
-		// Save to external file
-		amx_save_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST IDLE", ghost_idle)
-	}
-	if (ArraySize(ghost_idle_last) == 0)
-	{
-		for (index = 0; index < sizeof sound_ghost_idle_last; index++)
-			ArrayPushString(ghost_idle_last, sound_ghost_idle_last[index])
-		
-		// Save to external file
-		amx_save_setting_string_arr(ZP_GHOST_SETTINGS_FILE, "Sounds", "GHOST IDLE LAST", ghost_idle_last)
-	}
-	
-	// Ghost Class loaded?
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library))
-	{
-		new sound[SOUND_MAX_LENGTH];
-		for (index = 0; index < ArraySize(ghost_pain); index++)
-		{
-			ArrayGetString(ghost_pain, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_Pain);
-		}
-		for (index = 0; index < ArraySize(ghost_die); index++)
-		{
-			ArrayGetString(ghost_die, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_Die);
-		}
-		for (index = 0; index < ArraySize(ghost_fall); index++)
-		{
-			ArrayGetString(ghost_fall, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_Fall);
-		}
-		for (index = 0; index < ArraySize(ghost_miss_slash); index++)
-		{
-			ArrayGetString(ghost_miss_slash, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_MissSlash);
-		}
-		for (index = 0; index < ArraySize(ghost_miss_wall); index++)
-		{
-			ArrayGetString(ghost_miss_wall, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_MissWall);
-		}
-		for (index = 0; index < ArraySize(ghost_hit_normal); index++)
-		{
-			ArrayGetString(ghost_hit_normal, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_HitNormal);
-		}
-		for (index = 0; index < ArraySize(ghost_hit_stab); index++)
-		{
-			ArrayGetString(ghost_hit_stab, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_HitStab);
-		}
-		for (index = 0; index < ArraySize(ghost_idle); index++)
-		{
-			ArrayGetString(ghost_idle, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_Idle);
-		}
-		for (index = 0; index < ArraySize(ghost_idle_last); index++)
-		{
-			ArrayGetString(ghost_idle_last, index, sound, charsmax(sound));
-			AddSoundFileArray(sound, SoundTeam_Ghost, SoundType_IdleLast);
-		}
-	}
-	ArrayDestroy(ghost_pain);
-	ArrayDestroy(ghost_die);
-	ArrayDestroy(ghost_fall);
-	ArrayDestroy(ghost_miss_slash);
-	ArrayDestroy(ghost_miss_wall);
-	ArrayDestroy(ghost_hit_normal);
-	ArrayDestroy(ghost_hit_stab);
-	ArrayDestroy(ghost_idle);
-	ArrayDestroy(ghost_idle_last);
 }
 
 nemesis_precache()
@@ -537,38 +358,7 @@ public native_zombie_register_sound(plugin_id, num_params)
 	get_string(11, head_shot, charsmax(head_shot));
 	get_string(12, step, charsmax(step));
 	
-	RegSounds(classid, SoundTeam_Ghost, pain, die, fall, miss_slash, miss_wall, hit_normal, hit_stab, idle, idle_last, head_shot, step);
-}
-
-public native_ghost_register_sound(plugin_id, num_params)
-{
-	new classid = get_param(1);
-	new pain[SOUND_MAX_LENGTH];
-	new die[SOUND_MAX_LENGTH];
-	new fall[SOUND_MAX_LENGTH];
-	new miss_slash[SOUND_MAX_LENGTH];
-	new miss_wall[SOUND_MAX_LENGTH];
-	new hit_normal[SOUND_MAX_LENGTH];
-	new hit_stab[SOUND_MAX_LENGTH];
-	new idle[SOUND_MAX_LENGTH];
-	new idle_last[SOUND_MAX_LENGTH];
-	new head_shot[SOUND_MAX_LENGTH];
-	new step[SOUND_MAX_LENGTH];
-	
-	get_string(2, pain, charsmax(pain));
-	get_string(3, die, charsmax(die));
-	get_string(4, fall, charsmax(fall));
-	get_string(5, miss_slash, charsmax(miss_slash));
-	get_string(6, miss_wall, charsmax(miss_wall));
-	get_string(7, hit_normal, charsmax(hit_normal));
-	get_string(8, hit_stab, charsmax(hit_stab));
-	get_string(9, idle, charsmax(idle));
-	get_string(10, idle_last, charsmax(idle_last));
-	get_string(11, head_shot, charsmax(head_shot));
-	get_string(12, step, charsmax(step));
-	
-	RegSounds(classid, SoundTeam_Ghost, pain, die, fall, miss_slash, miss_wall, hit_normal, hit_stab, idle, idle_last, head_shot, step);
-
+	RegSounds(classid, SoundTeam_Zombie, pain, die, fall, miss_slash, miss_wall, hit_normal, hit_stab, idle, idle_last, head_shot, step);
 }
 
 public native_human_register_sound(plugin_id, num_params)
@@ -730,12 +520,6 @@ GetClientSoundTeamClass(client)
 			if(human_class != ZP_INVALID_HUMAN_CLASS)
 				return human_class;
 		}
-		case SoundTeam_Ghost:
-		{
-			new ghost_class = zp_class_ghost_get_current(client);
-			if(ghost_class != ZP_INVALID_GHOST_CLASS)
-				return ghost_class;
-		}
 		case SoundTeam_Zombie:
 		{
 			new zombie_class = zp_class_zombie_get_current(client);
@@ -759,10 +543,6 @@ SoundTeam:GetClientSoundTeam(client)
 	if(LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(client))
 	{
 		return SoundTeam_Nemesis;
-	}
-	else if(LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(client))
-	{
-		return SoundTeam_Ghost;
 	}
 	else if(LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(client))
 	{
@@ -940,10 +720,6 @@ public zp_fw_core_infect_post(id, attacker)
 	{
 		switch(GetClientSoundTeam(id))
 		{
-			case SoundTeam_Ghost:
-			{
-				set_task(random_float(50.0, 70.0), "zombie_idle_sounds", id+TASK_IDLE_SOUNDS, _, _, "b");
-			}
 			case SoundTeam_Zombie:
 			{
 				set_task(random_float(50.0, 70.0), "zombie_idle_sounds", id+TASK_IDLE_SOUNDS, _, _, "b");

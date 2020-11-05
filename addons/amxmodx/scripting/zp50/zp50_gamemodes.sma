@@ -20,16 +20,13 @@
 #include <zp50_core>
 #include <zp50_class_human>
 #include <zp50_gamemodes_const>
-#define LIBRARY_NEMESIS "zp50_class_nemesis"
-#include <zp50_class_nemesis>
-#define LIBRARY_SURVIVOR "zp50_class_survivor"
-#include <zp50_class_survivor>
+#define LIBRARY_ZAPHIE "zp50_class_zaphie"
+#include <zp50_class_zaphie>
+
+#define HAM_ZAPHIE HAM_DoZaphieDamage(victim, attacker, damage)
+#define HAM_ZOMBIE HAM_DoZombieDamage(victim, attacker, damage)
 
 #define TASK_GAMEMODE 100
-
-//Ghost模式扩展
-#define LIBRARY_GHOST "zp50_class_ghost"
-#include <zp50_class_ghost>
 
 #define MAXPLAYERS 32
 // CS Player CBase Offsets (win32)
@@ -43,9 +40,6 @@ const OFFSET_TIME_WEAPONIDLE = 48
 // HUD messages
 const Float:HUD_EVENT_X = -1.0
 const Float:HUD_EVENT_Y = 0.12
-
-// Some constants
-const DMG_HEGRENADE = (1<<24)
 
 enum _:TOTAL_FORWARDS
 {
@@ -61,8 +55,7 @@ new g_MaxPlayers
 new g_HudSync
 
 new cvar_gamemode_delay, cvar_round_start_show_hud,
-	cvar_prevent_consecutive, cvar_last_man_infection,
-	cvar_zombie_headshot_die;
+	cvar_prevent_consecutive, cvar_last_man_infection;
 
 // Game Modes data
 new Array:g_GameModeName
@@ -85,7 +78,6 @@ enum AttackType{
 
 enum ClassTeam{
 	ClassTeam_Human = 0,
-	ClassTeam_Ghost,
 	ClassTeam_Zombie
 }
 
@@ -113,7 +105,6 @@ public plugin_init()
 	cvar_round_start_show_hud = register_cvar("zp_round_start_show_hud", "1")
 	cvar_prevent_consecutive = register_cvar("zp_prevent_consecutive_modes", "1")
 	cvar_last_man_infection = register_cvar("zp_last_man_infection", "1")
-	cvar_zombie_headshot_die = register_cvar("zp_zombie_headshot_die", "1")
 	
 	g_Forwards[FW_GAME_MODE_CHOOSE_PRE] = CreateMultiForward("zp_fw_gamemodes_choose_pre", ET_CONTINUE, FP_CELL, FP_CELL)
 	g_Forwards[FW_GAME_MODE_CHOOSE_POST] = CreateMultiForward("zp_fw_gamemodes_choose_post", ET_IGNORE, FP_CELL, FP_CELL)
@@ -148,7 +139,7 @@ public plugin_natives()
 }
 public module_filter(const module[])
 {
-	if (equal(module, LIBRARY_NEMESIS) || equal(module, LIBRARY_SURVIVOR) || equal(module, LIBRARY_GHOST))
+	if (equal(module, LIBRARY_ZAPHIE))
 		return PLUGIN_HANDLED;
 	
 	return PLUGIN_CONTINUE;
@@ -159,30 +150,6 @@ public native_filter(const name[], index, trap)
 		return PLUGIN_HANDLED;
 		
 	return PLUGIN_CONTINUE;
-}
-
-public client_death(killer, victim, wpnindex, hitplace, TK)
-{
-	// convar off or head shot or kill self
-	if (get_pcvar_num(cvar_zombie_headshot_die) <= 0 || hitplace == HIT_HEAD || killer == victim){return;}
-	
-	// victim isn't zombie
-	if(!zp_core_is_zombie(victim) || zp_core_is_last_zombie(victim)){return;}
-	
-	// victim is ghost
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(victim)){return;}
-	
-	// victim is nemesis
-	if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(victim)){return;}
-	
-	// respawn as zombie
-	zp_core_respawn_as_zombie(victim, true);
-	
-	// respawn victim
-	ExecuteHamB(Ham_CS_RoundRespawn, victim);
-	
-	//update victim life state
-	zp_core_update_user_state(victim, 0);
 }
 
 public native_gamemodes_register(plugin_id, num_params)
@@ -562,104 +529,130 @@ public fw_TakeDamage(victim, inflictor, attacker, Float:damage, damage_type)
 	if (zp_core_is_zombie(attacker) == zp_core_is_zombie(victim))
 		return HAM_SUPERCEDE;
 	
-	new bool:damage_changed = false;
-	
-	// 幽灵正在击杀人类...
-	if (LibraryExists(LIBRARY_GHOST, LibType_Library) && zp_class_ghost_get(attacker) && !zp_class_ghost_get(victim) && !zp_core_is_zombie(victim))
-	{
-		//重置伤害值
-		new Float:damage_new = damage;
-		switch(g_AttackType[attacker])
-		{
-			case AttackType_Primary:{damage_new = zp_get_primary_damage(zp_class_ghost_get_current(attacker));}
-			case AttackType_Secondary:{damage_new = zp_get_secondary_damage(zp_class_ghost_get_current(attacker));}
-			default:{damage_new = get_user_damage_math(attacker, ClassTeam_Ghost, damage);}
-		}
-		g_AttackType[attacker] = AttackType_Other;
-		damage_changed = damage_new != damage && damage_new > 0.0;
-		
-		if(damage_changed)
-		{
-			damage = damage_new;
-			SetHamParamFloat(4, damage);
-		}
-		
-		// 幸存者被攻击
-		if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(victim))
-			return damage_changed?HAM_HANDLED:HAM_IGNORED;
-		
-		// 最后一个人类被击杀切换激活结束本局
-		if (zp_core_get_human_count() == 1)
-			return damage_changed?HAM_HANDLED:HAM_IGNORED;
-		
-		// 仅仅当造成死亡时激活感染
-		if (g_AllowInfection && zp_class_ghost_get_infection(zp_class_ghost_get_current(attacker)) && damage >= get_user_health(victim) && GetHamReturnStatus() != HAM_SUPERCEDE)
-		{
-			// 当人类允许被感染
-			new classid = zp_class_human_get_current(victim);
-			if(classid != ZP_INVALID_HUMAN_CLASS && zp_class_human_get_infection(classid))
-			{
-				// 感染当前玩家!
-				zp_class_ghost_set(victim, attacker)
-				return HAM_SUPERCEDE;
-			}
-		}
-		return damage_changed?HAM_HANDLED:HAM_IGNORED;
-	}
-	
 	// Mode allows infection and zombie attacking human...
 	if (zp_core_is_zombie(attacker) && !zp_core_is_zombie(victim))
 	{
-		// Nemesis shouldn't be infecting
-		if (LibraryExists(LIBRARY_NEMESIS, LibType_Library) && zp_class_nemesis_get(attacker))
-			return HAM_IGNORED;
-			
-		// Survivor shouldn't be infected
-		if (LibraryExists(LIBRARY_SURVIVOR, LibType_Library) && zp_class_survivor_get(victim))
-			return HAM_IGNORED;
-		
 		// Prevent infection/damage by HE grenade (bugfix)
-		if (damage_type & DMG_HEGRENADE)
+		if (damage_type & DMG_GRENADE)
 			return HAM_SUPERCEDE;
 		
-		// Last human is killed to trigger round end
-		if (zp_core_get_human_count() == 1)
-		{
-			// Disable infection?
-			if(get_pcvar_num(cvar_last_man_infection) > 0)
-			{
-				damage = get_user_health(victim)*1.0;
-				damage_changed = true;
-			}
-			else{damage_changed = reset_user_damage(attacker, ClassTeam_Zombie, damage);}
-			
-			if(damage_changed)
-				SetHamParamFloat(4, damage);
-			return damage_changed?HAM_HANDLED:HAM_IGNORED;
-		}
+		// Do Zaphie Damage
+		if (LibraryExists(LIBRARY_ZAPHIE, LibType_Library) && zp_class_zaphie_get(attacker))
+			return HAM_ZAPHIE;
 		
-		// Infect only if damage is done to victim
-		if (g_AllowInfection && zp_class_zombie_get_infection(zp_class_zombie_get_current(attacker)) && damage > 0.0 && GetHamReturnStatus() != HAM_SUPERCEDE)
-		{
-			// 当人类允许被感染
-			new classid = zp_class_human_get_current(victim);
-			if(classid != ZP_INVALID_HUMAN_CLASS && zp_class_human_get_infection(classid))
-			{
-				// Infect victim!
-				zp_core_infect(victim, attacker)
-				return HAM_SUPERCEDE;
-			}
-		}
-		return HAM_IGNORED;
+		// Do Zombie Damage
+		return HAM_ZOMBIE;
 	}
 	
 	return HAM_IGNORED;
 }
 
-bool:reset_user_damage(client, ClassTeam:team, &Float:damage)
+HAM_DoZaphieDamage(victim, attacker, &Float:damage)
 {
-	new Float:damage_new = get_user_damage_math(client, team, damage);
-	if(damage_new != damage && damage_new > 0.0)
+	new bool:changed = reset_user_damage(attacker, false, ClassTeam_Zombie, damage);
+	
+	if(damage < get_user_health(victim) || zp_core_is_last_human(victim))
+	{
+		if(changed)
+		{
+			SetHamParamFloat(4, damage);
+			return HAM_HANDLED;
+		}
+		return HAM_IGNORED;
+	}
+	
+	if(g_AllowInfection
+	&& is_user_infection_allows(attacker, ClassTeam_Zombie)
+	&& damage > 0.0
+	&& GetHamReturnStatus() != HAM_SUPERCEDE
+	&& is_user_infection_allows(victim, ClassTeam_Human))
+	{
+		zp_class_zaphie_set(victim);
+		return HAM_SUPERCEDE;
+	}
+	
+	return HAM_IGNORED;
+}
+
+HAM_DoZombieDamage(victim, attacker, &Float:damage)
+{
+	// Last human is killed to trigger round end
+	if (zp_core_is_last_human(victim))
+	{
+		if(reset_user_damage(attacker, get_pcvar_num(cvar_last_man_infection) != 0, ClassTeam_Zombie, damage))
+		{
+			SetHamParamFloat(4, damage);
+			return HAM_HANDLED;
+		}
+		return HAM_IGNORED;
+	}
+	
+	// Infect only if damage is done to victim
+	if (g_AllowInfection
+	&& is_user_infection_allows(attacker, ClassTeam_Zombie)
+	&& damage > 0.0
+	&& GetHamReturnStatus() != HAM_SUPERCEDE
+	&& is_user_infection_allows(victim, ClassTeam_Human))
+	{
+		// Infect victim!
+		zp_core_infect(victim, attacker)
+		return HAM_SUPERCEDE;
+	}
+	
+	return HAM_IGNORED;
+}
+
+bool:is_user_infection_allows(client, ClassTeam:team)
+{
+	new classid;
+	switch(team)
+	{
+		case ClassTeam_Human:
+		{
+			classid = zp_class_human_get_current(client);
+			if(classid != ZP_INVALID_HUMAN_CLASS)
+				return zp_class_human_get_infection(classid);
+		}
+		case ClassTeam_Zombie:
+		{
+			classid = zp_class_zombie_get_current(client);
+			if(classid != ZP_INVALID_ZOMBIE_CLASS)
+				return zp_class_zombie_get_infection(classid);
+		}
+	}
+	return true;
+}
+
+bool:reset_user_damage(client, bool:kill, ClassTeam:team, &Float:damage)
+{
+	new Float:damage_new = damage;
+	if(kill)
+		damage_new = get_user_health(client)*1.0 + get_user_armor(client);
+	else
+	{
+		new Float:damage_primary;
+		new Float:damage_secondary;
+		new Float:damage_multiplier;
+		get_setting_damage(client, team, damage_primary, damage_secondary, damage_multiplier);
+		
+		switch(g_AttackType[client])
+		{
+			case AttackType_Primary:
+			{
+				if(damage_primary >= 0.0)
+					damage_new = damage_primary;
+			}
+			case AttackType_Secondary:
+			{
+				if(damage_secondary >= 0.0)
+					damage_new = damage_secondary;
+			}
+		}
+		g_AttackType[client] = AttackType_Other;
+		
+		damage_new *= damage_multiplier;
+	}
+	if(damage_new != damage && damage_new >= 0.0)
 	{
 		damage = damage_new;
 		return true;
@@ -667,82 +660,107 @@ bool:reset_user_damage(client, ClassTeam:team, &Float:damage)
 	return false;
 }
 
-Float:get_user_damage_math(client, ClassTeam:team, const Float:damage)
-{
-	new Float:damage_new = damage;
-	new Float:damage_multiplier = get_user_damage_multiplier(client, team);
-	damage_new *= damage_multiplier;
-	return damage_new;
-}
-
-Float:get_user_damage_multiplier(client, ClassTeam:team)
+get_setting_damage(client, ClassTeam:team, &Float:primary, &Float:secondary, &Float:multiplier)
 {
 	new classid;
-	new Float:damage_multiplier = 1.0;
 	switch(team)
 	{
 		case ClassTeam_Human:
 		{
 			classid = zp_class_human_get_current(client);
 			if(classid != ZP_INVALID_HUMAN_CLASS)
-				damage_multiplier = zp_class_human_get_dm(classid);
-		}
-		case ClassTeam_Ghost:
-		{
-			classid = zp_class_ghost_get_current(client);
-			if(classid != ZP_INVALID_GHOST_CLASS)
-				damage_multiplier = zp_class_ghost_get_dm(classid);
+			{
+				primary = -1.0;
+				secondary = -1.0;
+				multiplier = zp_class_human_get_dm(classid);
+			}
 		}
 		case ClassTeam_Zombie:
 		{
 			classid = zp_class_zombie_get_current(client);
 			if(classid != ZP_INVALID_ZOMBIE_CLASS)
-				damage_multiplier = zp_class_zombie_get_dm(classid);
+			{
+				primary = zp_class_zombie_get_pd(classid);
+				secondary = zp_class_zombie_get_sd(classid);
+				multiplier = zp_class_zombie_get_dm(classid);
+			}
 		}
 	}
-	if(damage_multiplier < 0.0)
-		damage_multiplier = 1.0;
-	return damage_multiplier;
+	if(multiplier < 0.0)
+		multiplier = 1.0;
 }
 
-//Ghost的近身轻攻击延迟
+reset_attack_interval(client, AttackType:attack_type)
+{
+	new Float:interval;
+	if(zp_core_is_zombie(client))
+		interval = get_setting_interval(client, ClassTeam_Zombie, attack_type);
+	
+	g_AttackType[client] = attack_type;
+	
+	if(interval >= 0.0)
+	{
+		if(get_gametime() <= g_NextAttackTime[client])
+			return HAM_SUPERCEDE;
+		
+		g_NextAttackTime[client] = get_gametime() + interval;
+		set_next_attack(client, interval);
+	}
+	return HAM_IGNORED;
+}
+
+Float:get_setting_interval(client, ClassTeam:team, AttackType:attack_type)
+{
+	new classid;
+	new Float:interval_primary;
+	new Float:interval_secondary;
+	switch(team)
+	{
+		case ClassTeam_Human:
+		{
+			interval_primary = -1.0;
+			interval_secondary = -1.0;
+		}
+		case ClassTeam_Zombie:
+		{
+			classid = zp_class_zombie_get_current(client);
+			if(classid != ZP_INVALID_ZOMBIE_CLASS)
+			{
+				interval_primary = zp_class_zombie_get_pi(classid);
+				interval_secondary = zp_class_zombie_get_si(classid);
+			}
+		}
+	}
+	switch(attack_type)
+	{
+		case AttackType_Primary:{return interval_primary;}
+		case AttackType_Secondary:{return interval_secondary;}
+	}
+	return -1.0;
+}
+
 public fw_KnifePrimaryAttack(knife)
 {
-	if(!LibraryExists(LIBRARY_GHOST, LibType_Library) || !pev_valid(knife))
+	if(!pev_valid(knife))
 		return HAM_IGNORED;
 	
 	new owner = pev(knife, pev_owner);
-	if(!zp_class_ghost_get(owner))
+	if(!is_user_connected(owner) || !is_user_alive(owner))
 		return HAM_IGNORED;
 	
-	g_AttackType[owner] = AttackType_Primary;
-	if(get_gametime() <= g_NextAttackTime[owner])
-		return HAM_SUPERCEDE;
-	
-	new Float:next = zp_get_primary_interval(zp_class_ghost_get_current(owner));
-	g_NextAttackTime[owner] = get_gametime() + next;
-	set_next_attack(owner, next);
-	return HAM_IGNORED;
+	return reset_attack_interval(owner, AttackType_Primary);
 }
 
-//Ghost的近身重攻击延迟
 public fw_KnifeSecondaryAttack(knife)
 {
-	if(!LibraryExists(LIBRARY_GHOST, LibType_Library) || !pev_valid(knife))
+	if(!pev_valid(knife))
 		return HAM_IGNORED;
 	
 	new owner = pev(knife, pev_owner);
-	if(!zp_class_ghost_get(owner))
+	if(!is_user_connected(owner) || !is_user_alive(owner))
 		return HAM_IGNORED;
 	
-	g_AttackType[owner] = AttackType_Secondary;
-	if(get_gametime() <= g_NextAttackTime[owner])
-		return HAM_SUPERCEDE;
-	
-	new Float:next = zp_get_secondary_interval(zp_class_ghost_get_current(owner));
-	g_NextAttackTime[owner] = get_gametime() + next;
-	set_next_attack(owner, next);
-	return HAM_IGNORED;
+	return reset_attack_interval(owner, AttackType_Secondary);
 }
 
 set_next_attack(client, Float:cdtime, const modex = 0, const moder = 0)
