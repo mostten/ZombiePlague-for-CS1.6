@@ -28,7 +28,7 @@
 #include <zp50_grenade_fire>
 
 // Default models
-new const models_nemesis_player[][] = { "zombie_source" }
+new const models_nemesis_player[][] = { "zp_nemesis" }
 new const models_nemesis_claw[][] = { "models/zombie_plague/v_knife_zombie.mdl" }
 
 #define MAXPLAYERS 32
