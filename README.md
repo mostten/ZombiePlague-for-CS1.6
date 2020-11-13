@@ -36,44 +36,8 @@
 
 新增服务器指令:
 
-1.ghost_mod_flashlight: 是否激活手电筒特效(1打开,0关闭)
+1.zp_last_man_infection:最后一个人是否感染
 
-2.ghost_mod_flashlight_show_all: 是否在所有模式中激活手电筒特效(1打开,0关闭)
+2.zp_lighting_chance: 在雨天每局闪电出现的几率(1或者更大的整数值，值越大几率越低)
 
-3.zp_ghost_chance: 调整恶灵模式出现的几率(1或者更大的整数值，值越大几率越低)
-
-4.zp_ghost_min_players: 幽灵模式最少玩家数量
-
-5.zp_ghost_show_hud: 幽灵模式是否展示HUD信息
-
-6.zp_ghost_allow_respawn: 幽灵模式是否允许重生
-
-7.zp_ghost_respawn_after_last_human: 最后一个人类离开时重生玩家
-
-8.zp_ghost_first_hp_multiplier: 第一个母体恶灵的生命值倍数
-
-9.zp_ghost_sounds: 恶灵局是否播放背景音效(1打开,0关闭)
-
-10.zp_no_engine_knockback_zombie: 僵尸禁用引擎自带击退功能,只使用ZP击退功能
-
-11.zp_no_engine_knockback_nemesis: 复仇之神禁用引擎自带击退功能,只使用ZP击退功能
-
-12.zp_no_engine_knockback_ghost: 恶灵禁用引擎自带击退功能,只使用ZP击退功能
-
-13.zp_survivor_damage:幸存者攻击目标时的伤害倍数
-
-14.zp_last_man_infection:最后一个人是否感染
-
-15.zp_lighting_chance: 在雨天每局闪电出现的几率(1或者更大的整数值，值越大几率越低)
-
-16.zp_zombie_headshot_die: 增加僵尸未被爆头重生(1打开,0关闭)
-
-新增配置文件:
-
-1.addons/amxmodx/configs/zombieplague_mod_ghost.ini(幽灵模式配置文件)
-
-2.addons/amxmodx/configs/zp_ghostclasses.ini(经典幽灵属性配置文件)
-
-3.amxmodx/data/lang/zombie_plague_mod_ghost.txt(幽灵模式翻译文件)
-
-4.amxmodx/data/lang/zombie_plague_mod_ghost_classic.txt(经典幽灵类型翻译文件)
+3.zp_zombie_headshot_die: 增加僵尸未被爆头重生(1打开,0关闭)

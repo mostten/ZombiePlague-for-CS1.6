@@ -18,14 +18,12 @@
 #define TASK_SEEK_CATCH 100
 #define ID_TASK_SEEK_CATCH (taskid - TASK_SEEK_CATCH)
 #define TASK_RELOAD 200
-#define ID_TASK_RELOAD (taskid - TASK_RELOAD)
 #define WEAPONKEY 500001
 
 #define WEAP_LINUX_XTRA_OFF 4
 #define m_fKnown 44
 #define m_flNextPrimaryAttack 46
 #define m_flTimeWeaponIdle 48
-#define m_iClip 51
 #define m_fInReload 54
 #define PLAYER_LINUX_XTRA_OFF 5
 #define m_flNextAttack 83
@@ -115,7 +113,6 @@ public plugin_init()
     RegisterHam(Ham_Item_Deploy, bazooka_wclass, "fw_Item_Deploy_Post", 1);
     RegisterHam(Ham_Weapon_PrimaryAttack, bazooka_wclass, "fw_bazooka_PrimaryAttack");
     RegisterHam(Ham_Weapon_SecondaryAttack, bazooka_wclass, "fw_bazooka_SecondaryAttack");
-    RegisterHam(Ham_Item_PostFrame, bazooka_wclass, "fw_bazooka_ItemPostFrame");
     RegisterHam(Ham_Weapon_Reload, bazooka_wclass, "fw_bazooka_Reload");
     RegisterHam(Ham_Weapon_Reload, bazooka_wclass, "fw_bazooka_Reload_Post", 1);
     
@@ -214,8 +211,8 @@ public fw_bazooka_PrimaryAttack(weapon)
     
     if(RocketFire(owner))
     {
-        new iClip = get_pdata_int(weapon, m_iClip, WEAP_LINUX_XTRA_OFF) - 1;
-        set_pdata_int(weapon, m_iClip, (iClip > 0)?iClip:0, WEAP_LINUX_XTRA_OFF);
+        new iClip = cs_get_weapon_ammo(weapon) - 1;
+        cs_set_weapon_ammo(weapon, (iClip > 0)?iClip:0);
     }
     return HAM_SUPERCEDE;
 }
@@ -236,30 +233,6 @@ public fw_bazooka_SecondaryAttack(weapon)
     return HAM_SUPERCEDE;
 }
 
-public fw_bazooka_ItemPostFrame(weapon)
-{
-    new owner = pev(weapon, pev_owner);
-    if(!is_user_connected(owner)){return HAM_IGNORED;}
-    
-    if(!IsUserHasBazooka(owner)){return HAM_IGNORED;}
-    
-    new Float:flNextAttack = get_pdata_float(owner, m_flNextAttack, PLAYER_LINUX_XTRA_OFF);
-    new iBpAmmo = cs_get_user_bpammo(owner, bazooka_wid);
-    new iClip = get_pdata_int(weapon, m_iClip, WEAP_LINUX_XTRA_OFF);
-    new fInReload = get_pdata_int(weapon, m_fInReload, WEAP_LINUX_XTRA_OFF);
-    
-    if(fInReload && flNextAttack <= 0.0)
-    {
-        new j = min(get_pcvar_num(pcvar_clip) - iClip, iBpAmmo);
-        set_pdata_int(weapon, m_iClip, iClip + j, WEAP_LINUX_XTRA_OFF);
-        cs_set_user_bpammo(owner, bazooka_wid, iBpAmmo-j);
-        
-        fInReload = 0;
-        set_pdata_int(weapon, m_fInReload, fInReload, WEAP_LINUX_XTRA_OFF);
-    }
-    return HAM_IGNORED;
-}
-
 public fw_bazooka_Reload(weapon)
 {
     new owner = pev(weapon, pev_owner);
@@ -269,13 +242,14 @@ public fw_bazooka_Reload(weapon)
     
     SetUserInfo(owner, UserInfo_Clip, -1);
     new iBpAmmo = cs_get_user_bpammo(owner, bazooka_wid);
-    new iClip = get_pdata_int(weapon, m_iClip, WEAP_LINUX_XTRA_OFF)
+    new iClip = cs_get_weapon_ammo(weapon);
     
-    if(iBpAmmo <= 0){return HAM_SUPERCEDE;}
-    if(iClip >= get_pcvar_num(pcvar_clip)){return HAM_SUPERCEDE;}
-    
-    SetUserInfo(owner, UserInfo_Clip, iClip);
-    return HAM_IGNORED;
+    if(iBpAmmo > 0 && iClip < get_pcvar_num(pcvar_clip) && !task_exists(owner + TASK_RELOAD))
+    {
+        StartBazookaReload(owner, weapon);
+        SetUserInfo(owner, UserInfo_Clip, iClip);
+    }
+    return HAM_SUPERCEDE;
 }
 
 public fw_bazooka_Reload_Post(weapon) {
@@ -289,7 +263,7 @@ public fw_bazooka_Reload_Post(weapon) {
     || clip == -1){return HAM_IGNORED;}
     
     new Float:reloadtime = get_pcvar_float(pcvar_delay);
-    set_pdata_int(weapon, m_iClip, clip, WEAP_LINUX_XTRA_OFF);
+    cs_set_weapon_ammo(weapon, clip);
     set_pdata_float(weapon, m_flTimeWeaponIdle, reloadtime, WEAP_LINUX_XTRA_OFF);
     set_pdata_float(owner, m_flNextAttack, reloadtime, PLAYER_LINUX_XTRA_OFF);
     set_pdata_int(weapon, m_fInReload, 1, WEAP_LINUX_XTRA_OFF);
@@ -855,16 +829,34 @@ ProgressStatus(const id, const duration)
     message_end();
 }
 
-public TaskBazookaReload(taskid)
+public TaskBazookaReload(data[2])
 {
-    if(!IsValidUser(ID_TASK_RELOAD) || !is_user_alive(ID_TASK_RELOAD) || !IsUserHasBazooka(ID_TASK_RELOAD)){return;}
+    new id = data[0], weapon = data[1];
+    if(!IsValidUser(id)
+    || !is_user_alive(id)
+    || !IsUserHasBazooka(id)
+    || !pev_valid(weapon)){return;}
     
-    if(get_user_weapon(ID_TASK_RELOAD) == bazooka_wid)
+    new weaponid = cs_get_weapon_id(weapon);
+    
+    if(weaponid != bazooka_wid || GetWeaponOwner(weapon) != id){return;}
+    
+    new iBpAmmo = cs_get_user_bpammo(id, weaponid);
+    new iClip = cs_get_weapon_ammo(weapon);
+    new j = min(get_pcvar_num(pcvar_clip) - iClip, iBpAmmo);
+    new iNewClip = iClip + j;
+    new iNewBpAmmo = iBpAmmo - j;
+    cs_set_weapon_ammo(weapon, iNewClip);
+    cs_set_user_bpammo(id, weaponid, iNewBpAmmo);
+    set_pdata_int(weapon, m_fInReload, 0, WEAP_LINUX_XTRA_OFF);
+    
+    if(get_user_weapon(id) == bazooka_wid)
+        ReplaceWeaponModels(id, bazooka_wid);
+    
+    if(iNewClip > 0)
     {
-        ReplaceWeaponModels(ID_TASK_RELOAD, bazooka_wid);
-        
-        client_print(ID_TASK_RELOAD, print_center, "Bazooka reloaded!");
-        emit_sound(ID_TASK_RELOAD, CHAN_WEAPON, spickup, VOL_NORM, ATTN_NORM, 0, PITCH_NORM);
+        client_print(id, print_center, "Bazooka reloaded!");
+        emit_sound(id, CHAN_WEAPON, spickup, VOL_NORM, ATTN_NORM, 0, PITCH_NORM);
     }
 }
 
@@ -962,8 +954,6 @@ bool:RocketFire(const id)
     RegisterHamFromEntity(Ham_Think, rocket, "fw_RocketThink");
     
     SetUserInfo(id, UserInfo_LastShoot, get_gametime());
-    if(!task_exists(id + TASK_RELOAD))
-        set_task(get_pcvar_float(pcvar_delay), "TaskBazookaReload", id + TASK_RELOAD);
     
     switch(GetUserFireMode(id))
     {
@@ -981,9 +971,26 @@ bool:RocketFire(const id)
     
     
     LaunchPush(id, 130);
-    ProgressStatus(id, get_pcvar_num(pcvar_delay));
     
     return true;
+}
+
+StartBazookaReload(const id, const weapon)
+{
+    new Float:delay = get_pcvar_float(pcvar_delay);
+    set_pdata_float(id, m_flNextAttack, delay, PLAYER_LINUX_XTRA_OFF);
+    set_pdata_int(weapon, m_fInReload, 1, WEAP_LINUX_XTRA_OFF);
+    
+    PlayWeaponAnimation(id, 2);
+    
+    if(!task_exists(id + TASK_RELOAD))
+    {
+        new data[2];
+        data[0] = id;
+        data[1] = weapon;
+        set_task(delay, "TaskBazookaReload", id + TASK_RELOAD, data, sizeof(data));
+    }
+    ProgressStatus(id, get_pcvar_num(pcvar_delay));
 }
 
 GetBazookaConfigSpeed(const id)
