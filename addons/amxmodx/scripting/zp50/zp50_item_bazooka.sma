@@ -207,11 +207,14 @@ public fw_bazooka_PrimaryAttack(weapon)
     
     if(!IsUserCanShoot(owner)){return HAM_SUPERCEDE;}
     
+    new iClip = cs_get_weapon_ammo(weapon);
+    if(iClip < 1){return HAM_SUPERCEDE;}
+    
     PlayWeaponAnimation(owner, 3);
     
     if(RocketFire(owner))
     {
-        new iClip = cs_get_weapon_ammo(weapon) - 1;
+        --iClip;
         cs_set_weapon_ammo(weapon, (iClip > 0)?iClip:0);
     }
     return HAM_SUPERCEDE;
