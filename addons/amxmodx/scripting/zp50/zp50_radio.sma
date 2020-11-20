@@ -509,30 +509,23 @@ bool:get_radio_info_arrays(RadioMenu:radio_menu, RadioTeam:radio_team, radio_cla
  */
 StrContains(const str[], const substr[], bool:caseSensitive = true)
 {
-	new strSize = strlen(str) + 1;
-	new substrSize = strlen(substr) + 1;
-	if(strSize < 2 || substrSize < 2 || substrSize > strSize)
-		return -1;
+	new strLen = strlen(str);
+	new subLen = strlen(substr);
+	if(strLen < 1 || subLen < 1 || subLen > strLen){return -1;}
 	
-	for(new i = 0; i < strSize; i++)
+	for(new i = 0; i < strLen; i++)
 	{
-		if((caseSensitive && str[i] != substr[0]) || (!caseSensitive && tolower(str[i]) != tolower(substr[0])))
-			continue;
+		if((caseSensitive && str[i] != substr[0]) || (!caseSensitive && tolower(str[i]) != tolower(substr[0]))){continue;}
+		
 		new count = 1;
-		for(new subi = 1; subi < substrSize; subi++)
+		for(new subi = 1; subi < subLen; subi++)
 		{
 			new temp = i + subi;
-			if((temp < strSize) && ((caseSensitive && substr[subi] == str[temp]) || (!caseSensitive && tolower(substr[subi]) == tolower(str[temp]))))
-			{
-				count++;
-			}
-			else
-			{
-				break;
-			}
-			if(count == strlen(substr))
-				return i;
+			
+			if((temp < strLen) && ((caseSensitive && substr[subi] == str[temp]) || (!caseSensitive && tolower(substr[subi]) == tolower(str[temp])))){count++;}
+			else{break;}
 		}
+		if(count == subLen){return i;}
 	}
 	return -1;
 }

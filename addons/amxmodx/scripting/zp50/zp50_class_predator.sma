@@ -36,7 +36,7 @@ new const FFADE_IN = 0x0000;
 // Predator Attributes
 new const predator_name[] = "Predator";
 new const predator_info[] = "=Predator=";
-new const predator_health = 200;
+new const predator_health = 2000;
 new const predator_armor = 200;
 new const predator_maxvisib = 200;
 new const Float:predator_speed = 350.0;
