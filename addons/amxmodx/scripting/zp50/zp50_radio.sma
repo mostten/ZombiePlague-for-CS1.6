@@ -625,7 +625,7 @@ public radio_menu_handle(client, menuid, item)
 		if(ArraySize(g_radio_sounds) > radio_info[RadioInfo_Sound] >= 0)
 			ArrayGetString(g_radio_sounds, radio_info[RadioInfo_Sound], sound, charsmax(sound));
 		
-		radio_send_team(client, radio_info[RadioInfo_Team], message, sound);
+		radio_send_team(client, get_user_team(client), message, sound);
 	}
 	menu_destroy(menuid);
 	return PLUGIN_HANDLED;
@@ -663,11 +663,11 @@ radio_send(client, sender, const message[], const sound[])
 		sound_send(client, sender, sound);
 }
 
-radio_send_team(sender, RadioTeam:radio_team, const message[], const sound[])
+radio_send_team(sender, const sender_team, const message[], const sound[])
 {
 	for(new client = 1; client <= g_MaxPlayers; client++)
 	{
-		if(is_user_connected(client) && !is_user_bot(client) && is_user_alive(client) && get_user_radio_team(client) == radio_team)
+		if(is_user_connected(client) && !is_user_bot(client) && is_user_alive(client) && get_user_team(client) == sender_team)
 			radio_send(client, sender, message, sound);
 	}
 }
