@@ -205,6 +205,11 @@ public native_radio_reg_human(plugin_id, num_params)
 
 public native_radio_reg_nemesis(plugin_id, num_params)
 {
+	if(!LibraryExists(LIBRARY_NEMESIS, LibType_Library)){return false;}
+	
+	new radio_class = zp_class_nemesis_get_classid();
+	if(radio_class == ZP_INVALID_ZOMBIE_CLASS){return false;}
+	
 	new name[NAME_MAX_LENGTH];
 	get_string(1, name, charsmax(name));
 	
@@ -222,13 +227,16 @@ public native_radio_reg_nemesis(plugin_id, num_params)
 	
 	new RadioTeam:radio_team = RadioTeam_Nemesis;
 	
-	new radio_class = 0;
-	
 	return push_radio_array(name, name_trans, message, message_trans, sound, radio_menu, radio_team, radio_class);
 }
 
 public native_radio_reg_survivor(plugin_id, num_params)
 {
+	if(!LibraryExists(LIBRARY_SURVIVOR, LibType_Library)){return false;}
+	
+	new radio_class = zp_class_survivor_get_classid();
+	if(radio_class == ZP_INVALID_HUMAN_CLASS){return false;}
+	
 	new name[NAME_MAX_LENGTH];
 	get_string(1, name, charsmax(name));
 	
@@ -245,8 +253,6 @@ public native_radio_reg_survivor(plugin_id, num_params)
 	new RadioMenu:radio_menu = RadioMenu:get_param(6);
 	
 	new RadioTeam:radio_team = RadioTeam_Survivor;
-	
-	new radio_class = 0;
 	
 	return push_radio_array(name, name_trans, message, message_trans, sound, radio_menu, radio_team, radio_class);
 }
@@ -273,21 +279,31 @@ public native_radio_replace_human(plugin_id, num_params)
 
 public native_radio_replace_nemesis(plugin_id, num_params)
 {
+	if(!LibraryExists(LIBRARY_NEMESIS, LibType_Library)){return false;}
+	
+	new classid = zp_class_nemesis_get_classid();
+	if(classid == ZP_INVALID_ZOMBIE_CLASS){return false;}
+	
 	new search[SOUND_MAX_LENGTH], replace[SOUND_MAX_LENGTH];
 	get_string(1, search, charsmax(search));
 	get_string(2, replace, charsmax(replace));
 	new RadioTeam:radio_team = RadioTeam_Nemesis;
-	new classid = 0;
+	
 	return push_replace_array(search, replace, radio_team, classid);
 }
 
 public native_radio_replace_survivor(plugin_id, num_params)
 {
+	if(!LibraryExists(LIBRARY_SURVIVOR, LibType_Library)){return false;}
+	
+	new classid = zp_class_survivor_get_classid();
+	if(classid == ZP_INVALID_HUMAN_CLASS){return false;}
+	
 	new search[SOUND_MAX_LENGTH], replace[SOUND_MAX_LENGTH];
 	get_string(1, search, charsmax(search));
 	get_string(2, replace, charsmax(replace));
 	new RadioTeam:radio_team = RadioTeam_Survivor;
-	new classid = 0;
+	
 	return push_replace_array(search, replace, radio_team, classid);
 }
 
@@ -470,11 +486,11 @@ get_user_radio_class(client)
 			}
 			case RadioTeam_Nemesis:
 			{
-				return 0;
+				return zp_class_nemesis_get_classid();
 			}
 			case RadioTeam_Survivor:
 			{
-				return 0;
+				return zp_class_survivor_get_classid();
 			}
 		}
 	}

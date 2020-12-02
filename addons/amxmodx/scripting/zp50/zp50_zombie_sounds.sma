@@ -536,11 +536,11 @@ GetClientSoundTeamClass(client)
 		}
 		case SoundTeam_Nemesis:
 		{
-			return 0;
+			return zp_class_nemesis_get_classid();
 		}
 		case SoundTeam_Survivor:
 		{
-			return 0;
+			return zp_class_survivor_get_classid();
 		}
 	}
 	return ZP_INVALID_TEAM_CLASS;
