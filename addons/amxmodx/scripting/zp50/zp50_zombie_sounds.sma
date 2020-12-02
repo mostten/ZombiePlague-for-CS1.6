@@ -389,7 +389,11 @@ public native_human_register_sound(plugin_id, num_params)
 
 public native_survivor_register_sound(plugin_id, num_params)
 {
-	new classid = 0;
+	if(!LibraryExists(LIBRARY_SURVIVOR, LibType_Library)){return;}
+	
+	new classid = zp_class_survivor_get_classid();
+	if(classid == ZP_INVALID_HUMAN_CLASS){return;}
+	
 	new pain[SOUND_MAX_LENGTH];
 	new die[SOUND_MAX_LENGTH];
 	new fall[SOUND_MAX_LENGTH];
@@ -416,7 +420,11 @@ public native_survivor_register_sound(plugin_id, num_params)
 
 public native_nemesis_register_sound(plugin_id, num_params)
 {
-	new classid = 0;
+	if(!LibraryExists(LIBRARY_NEMESIS, LibType_Library)){return;}
+	
+	new classid = zp_class_nemesis_get_classid();
+	if(classid == ZP_INVALID_ZOMBIE_CLASS){return;}
+	
 	new pain[SOUND_MAX_LENGTH];
 	new die[SOUND_MAX_LENGTH];
 	new fall[SOUND_MAX_LENGTH];

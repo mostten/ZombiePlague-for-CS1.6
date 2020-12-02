@@ -32,6 +32,14 @@ native zp_class_survivor_get(id)
 native zp_class_survivor_set(id)
 
 /**
+ * Returns a survivor class' ID.
+ *
+ * @param name		Class name to look for.
+ * @return			Internal survivor class ID, or ZP_INVALID_HUMAN_CLASS if it's unvalid.
+ */
+native zp_class_survivor_get_classid();
+
+/**
  * Returns number of alive survivors.
  *
  * @return		Survivor count.

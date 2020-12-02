@@ -127,6 +127,7 @@ public plugin_natives()
 	register_library("zp50_class_nemesis");
 	register_native("zp_class_nemesis_get", "native_class_nemesis_get");
 	register_native("zp_class_nemesis_set", "native_class_nemesis_set");
+	register_native("zp_class_nemesis_get_classid", "_class_nemesis_get_classid");
 	register_native("zp_class_nemesis_get_count", "native_class_nemesis_get_count");
 	register_native("zp_class_nemesis_get_maxhealth", "_class_nemesis_get_max_health");
 	
@@ -322,6 +323,11 @@ public _class_nemesis_get_max_health(plugin_id, num_params)
 	}
 	
 	return zp_class_zombie_get_max_health(id);
+}
+
+public _class_nemesis_get_classid(plugin_id, num_params)
+{
+	return g_Classid;
 }
 
 // Nemesis aura task

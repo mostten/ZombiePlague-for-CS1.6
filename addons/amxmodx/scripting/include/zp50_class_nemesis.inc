@@ -32,6 +32,14 @@ native bool:zp_class_nemesis_get(id)
 native zp_class_nemesis_set(id)
 
 /**
+ * Returns a nemesis class' ID.
+ *
+ * @param name		Class name to look for.
+ * @return			Internal nemesis class ID, or ZP_INVALID_ZOMBIE_CLASS if it's unvalid.
+ */
+native zp_class_nemesis_get_classid();
+
+/**
  * Returns number of alive nemesis.
  *
  * @return		Nemesis count.

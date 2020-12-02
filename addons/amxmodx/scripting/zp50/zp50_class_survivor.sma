@@ -125,6 +125,7 @@ public plugin_natives()
 	register_library("zp50_class_survivor")
 	register_native("zp_class_survivor_get", "native_class_survivor_get")
 	register_native("zp_class_survivor_set", "native_class_survivor_set")
+	register_native("zp_class_survivor_get_classid", "_class_survivor_get_classid");
 	register_native("zp_class_survivor_get_count", "native_class_survivor_get_count")
 	register_native("zp_class_survivor_get_maxhealth", "_class_survivor_get_max_health")
 }
@@ -267,6 +268,11 @@ public _class_survivor_get_max_health(plugin_id, num_params)
 	}
 	
 	return zp_class_human_get_max_health(id);
+}
+
+public _class_survivor_get_classid(plugin_id, num_params)
+{
+	return g_Classid;
 }
 
 // Survivor aura task
