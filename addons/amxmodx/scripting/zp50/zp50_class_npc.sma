@@ -121,7 +121,7 @@ public plugin_init()
 {
 	register_plugin("[ZP] Class: Npc", "1.0", "Mostten");
 	
-	register_clcmd("say /nclass", "show_menu_npcclass"/*, ADMIN_ADMIN*/);
+	register_clcmd("say /nclass", "show_menu_npcclass", ADMIN_ADMIN);
 	
 	g_Forwards[FW_NPC_SPAWN_POST] = CreateMultiForward("zp_fw_npc_spawn_post", ET_IGNORE, FP_CELL, FP_CELL);
 	g_Forwards[FW_NPC_DEAD_POST] = CreateMultiForward("zp_fw_npc_dead_post", ET_IGNORE, FP_CELL, FP_CELL);

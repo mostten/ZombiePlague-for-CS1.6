@@ -60,7 +60,7 @@ new g_NightVisionActive;
 new Array:g_NvisionInfos = Invalid_Array;
 new NvisionType:g_GameModNvisionType = NvisionType_Original;
 
-new g_MsgNVGToggle, g_MsgScreenFade;
+new g_MsgNVGToggle, g_MsgScreenFade, g_fwLightStyle;
 
 new cvar_nvision_custom, cvar_nvision_radius
 new cvar_nvision_zombie, cvar_nvision_zombie_color_R, cvar_nvision_zombie_color_G, cvar_nvision_zombie_color_B
@@ -72,9 +72,16 @@ new cvar_nvision_zaphie, cvar_nvision_zaphie_color_R, cvar_nvision_zaphie_color_
 
 new g_szCurrentLight[MAXPLAYERS+1][ZP_LIGHTSTYLE_LENGTH];
 
+public plugin_precache()
+{
+	g_fwLightStyle = register_forward(FM_LightStyle, "fw_LightStyle");
+}
+
 public plugin_init()
 {
 	register_plugin("[ZP] Nightvision", ZP_VERSION_STRING, "ZP Dev Team")
+	
+	unregister_forward(FM_LightStyle, g_fwLightStyle);
 	
 	g_MsgNVGToggle = get_user_msgid("NVGToggle")
 	register_message(g_MsgNVGToggle, "message_nvgtoggle")
@@ -382,6 +389,26 @@ public client_disconnected(id)
 	flag_unset(g_NightVisionActive, id);
 	remove_task(id+TASK_NIGHTVISION);
 	remove_task(id+TASK_SCREENFADE);
+}
+
+public fw_LightStyle(style, const light_style[])
+{
+	if(!style && g_GameModNvisionType == NvisionType_LightStyle)
+	{
+		for(new id = 1; id <= MAXPLAYERS; id++)
+		{
+			g_szCurrentLight[id][0] = light_style[0];
+			
+			if(!is_user_connected(id)
+			|| is_user_bot(id)
+			|| !flag_get(g_NightVisionActive, id)){continue;}
+			
+			zp_core_set_lightstyle(id, "#", false);
+			RequestFrame("restore_screenfade_task", id+TASK_SCREENFADE);
+		}
+		return FMRES_SUPERCEDE;
+	}
+	return FMRES_IGNORED;
 }
 
 // Prevent spectators' nightvision from being turned off when switching targets, etc.
